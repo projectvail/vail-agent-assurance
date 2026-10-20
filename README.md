@@ -77,3 +77,5 @@ plugins/vail-agent-assurance/
 ```
 
 Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. Bump `version` in `plugin.json` for every release.
+
+The plugin always connects to production. To try skill changes against a local VAIL server, don't install the plugin. Instead, connect the local server with `claude mcp add` (as in [Without the plugin](#without-the-plugin), using `http://127.0.0.1:8099/mcp`), and copy `skills/agent-assurance/` to `~/.claude/skills/`. The server's README, under "Coding agents against a local server", explains how to run it.
