@@ -1,0 +1,12 @@
+{
+  "name": "vail-agent-assurance",
+  "description": "VAIL Agent Assurance Engine for coding agents",
+  "owner": { "name": "Project VAIL", "url": "https://projectvail.org" },
+  "plugins": [
+    {
+      "name": "vail-agent-assurance",
+      "source": "./plugins/vail-agent-assurance",
+      "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine"
+    }
+  ]
+}
