@@ -1,19 +1,19 @@
 ---
 name: agent-assurance
-description: Use VAIL Agent Assurance Engine to scan an AI agent's source for risky behaviors and generate test probes. Use when the user asks to scan, assess, or generate probes or test cases for an agent with VAIL or the Assurance Engine, to upload or replace an agent's source in VAIL, or to check on or retrieve VAIL behaviors and probes.
+description: Use VAIL Agent Assurance Engine to scan an AI agent's source for unintended behaviors and generate test probes. Use when the user asks to scan, assess, or generate probes or test cases for an agent with VAIL or the Assurance Engine, to upload or replace an agent's source in VAIL, or to check on or retrieve VAIL behaviors and probes.
 ---
 
 # VAIL Agent Assurance Engine
 
-The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test conversations that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP tools.
+The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test prompts that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP tools.
 
 ## What the results mean
 
-- **Vulnerability behaviors**: ways the agent could be led to do something harmful or unintended, such as acting on the wrong customer, exceeding a limit, or leaking data. Each one cites the evidence in the source that suggests it.
+- **Vulnerability behaviors**: ways the agent could be led to do something harmful or unintended, such as acting on the wrong customer, calling a tool with the wrong argument, exceeding a limit, or leaking data. Each one cites the evidence in the source that suggests it.
 - **Control behaviors**: things the agent must keep doing correctly, such as confirming before a refund or refusing out-of-scope requests.
 - **Probes**: test cases for those behaviors. A probe has a message (often with placeholders filled from shared *option pools*), and the metrics that judge the agent's reply.
 
-These are **hypotheses generated from source**, not findings. A vulnerability behavior means the source suggests a risk worth testing, not that the agent is vulnerable. Only running the probes against the live agent, which happens in the VAIL web app, establishes how it behaves. Say this when presenting results.
+These are **hypotheses generated from source**, not findings. A vulnerability behavior means the source suggests a risk worth testing, not that the agent is vulnerable. Only running the probes against the live agent, currently supported in the VAIL web app, establishes how it behaves. Say this when presenting results.
 
 ## Before you start
 

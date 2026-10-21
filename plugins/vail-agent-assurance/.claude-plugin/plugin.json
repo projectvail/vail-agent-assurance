@@ -2,7 +2,7 @@
   "name": "vail-agent-assurance",
   "version": "0.1.0",
   "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine",
-  "author": { "name": "Project VAIL", "url": "https://projectvail.org" },
+  "author": { "name": "Project VAIL", "url": "https://projectvail.com" },
   "homepage": "https://agents.projectvail.com",
   "repository": "https://github.com/projectvail/vail-agent-assurance",
   "keywords": ["ai-agents", "assurance", "testing", "security", "mcp"],
