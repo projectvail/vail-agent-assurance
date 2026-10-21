@@ -49,7 +49,7 @@ url = "https://agents.projectvail.com/mcp"
 bearer_token_env_var = "VAIL_TOKEN"
 ```
 
-To give Codex the workflow instructions too, copy `plugins/vail-agent-assurance/skills/agent-assurance/` into your Codex skills directory.
+To give Codex the workflow instructions too, copy the `plugins/vail-agent-assurance/skills/agent-assurance` directory into your Codex skills directory. Leave it as a folder named `agent-assurance` containing `SKILL.md`.
 
 > Codex support has not been tested yet. Check the [Codex MCP documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) for the current configuration format.
 
@@ -78,4 +78,10 @@ plugins/vail-agent-assurance/
 
 Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. Bump `version` in `plugin.json` for every release.
 
-The plugin always connects to production. To try skill changes against a local VAIL server, don't install the plugin. Instead, connect the local server with `claude mcp add` (as in [Without the plugin](#without-the-plugin), using `http://127.0.0.1:8099/mcp`), and copy `skills/agent-assurance/` to `~/.claude/skills/`. The server's README, under "Coding agents against a local server", explains how to run it.
+The plugin always connects to production. To try skill changes against a local VAIL server, don't install the plugin. Instead, connect the local server with `claude mcp add` (as in [Without the plugin](#without-the-plugin), using `http://127.0.0.1:8099/mcp`), and copy the skill directory:
+
+```sh
+cp -R plugins/vail-agent-assurance/skills/agent-assurance ~/.claude/skills/
+```
+
+The result is `~/.claude/skills/agent-assurance/SKILL.md`. Claude Code does not discover a `SKILL.md` placed directly in `~/.claude/skills/`. The server's README, under "Coding agents against a local server", explains how to run it.
