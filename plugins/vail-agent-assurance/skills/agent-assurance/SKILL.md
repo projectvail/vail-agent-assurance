@@ -5,7 +5,7 @@ description: Use VAIL Agent Assurance Engine to scan an AI agent's source for un
 
 # VAIL Agent Assurance Engine
 
-The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test prompts that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP tools.
+The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test prompts that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP server's tools. Depending on the coding agent, they may appear with a prefix, such as `mcp__vail__get_identity` in Claude Code and Codex or `mcp_vail_get_identity` in Hermes; this skill uses the bare names.
 
 ## What the results mean
 
@@ -17,9 +17,15 @@ These are **hypotheses generated from source**, not findings. A vulnerability be
 
 ## Before you start
 
-The user needs an existing VAIL organization (sign up at https://agents.projectvail.com) and a personal access token, created under **Access tokens** in the web app. The token is configured in the MCP connection to `https://agents.projectvail.com/mcp` as an `Authorization: Bearer` header; with the Claude Code plugin, Claude Code asks for it when the plugin is enabled and keeps it in secure storage.
+The user needs an existing VAIL organization (sign up at https://agents.projectvail.com) and a personal access token, created under **Access tokens** in the web app. The token is sent to `https://agents.projectvail.com/mcp` as an `Authorization: Bearer` header by the MCP connection, not by you.
 
-If the `vail` tools are missing or every call fails to authenticate, ask the user to create a token and configure it (in Claude Code: `/plugin`, then configure vail-agent-assurance). Never ask them to paste a token into the conversation, and never write one into a file.
+If the `vail` tools are missing or every call fails to authenticate, ask the user to create a token and configure it for their coding agent:
+
+- **Claude Code** (plugin): run `/plugin` and configure vail-agent-assurance. Claude Code keeps the token in secure storage.
+- **Codex** (plugin or `config.toml`): Codex reads the token from the `VAIL_TOKEN` environment variable. Set it in the environment Codex starts from, then restart Codex.
+- **Hermes**: run `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header` and enter the token when prompted. Hermes stores it in `~/.hermes/.env`.
+
+Never ask them to paste a token into the conversation, never write one into a file yourself, and never put one on a command line you run.
 
 Call `get_identity` first to confirm which organization you are acting in.
 
