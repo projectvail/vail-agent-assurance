@@ -23,7 +23,27 @@ jobs:
           set -euo pipefail
 
           plugin_dir="plugins/vail-agent-assurance"
-          manifest="$plugin_dir/.claude-plugin/plugin.json"
+          claude_manifest="$plugin_dir/.claude-plugin/plugin.json"
+          codex_manifest="$plugin_dir/.codex-plugin/plugin.json"
+
+          version_at() {
+            local rev="$1" manifest="$2"
+            if ! git cat-file -e "${rev}:${manifest}" 2>/dev/null; then
+              printf ''
+              return 0
+            fi
+            git show "${rev}:${manifest}" | python3 -c 'import json, sys; value = json.load(sys.stdin).get("version"); print("" if value is None else value)'
+          }
+
+          claude_version="$(version_at HEAD "$claude_manifest")"
+          codex_version="$(version_at HEAD "$codex_manifest")"
+          echo "Claude Code manifest version: ${claude_version:-<none>}"
+          echo "Codex manifest version: ${codex_version:-<none>}"
+
+          if [ "$claude_version" != "$codex_version" ]; then
+            echo "::error file=${codex_manifest},title=Manifest versions differ::${claude_manifest} declares '${claude_version:-<none>}' but ${codex_manifest} declares '${codex_version:-<none>}'. Keep them the same."
+            exit 1
+          fi
 
           changed="$(git diff --name-only "$BASE_SHA" HEAD -- "$plugin_dir")"
           if [ -z "$changed" ]; then
@@ -34,28 +54,19 @@ jobs:
           echo "Plugin files changed:"
           printf '%s\n' "$changed"
 
-          version_at() {
-            local rev="$1"
-            if ! git cat-file -e "${rev}:${manifest}" 2>/dev/null; then
-              printf ''
-              return 0
-            fi
-            git show "${rev}:${manifest}" | python3 -c 'import json, sys; value = json.load(sys.stdin).get("version"); print("" if value is None else value)'
-          }
-
-          base_version="$(version_at "$BASE_SHA")"
-          head_version="$(version_at HEAD)"
+          base_version="$(version_at "$BASE_SHA" "$claude_manifest")"
+          head_version="$claude_version"
 
           echo "Base version: ${base_version:-<none>}"
           echo "Pull request version: ${head_version:-<none>}"
 
           if [ -z "$head_version" ]; then
-            echo "plugin.json declares no version, so Claude Code tracks commits instead of this string."
+            echo "The manifests declare no version, so installs track commits instead of this string."
             exit 0
           fi
 
           if [ "$base_version" = "$head_version" ]; then
-            echo "::error file=${manifest},title=Version was not bumped::Plugin files changed but version is still '${head_version}'. Bump version in ${manifest} so existing installs pick up this change."
+            echo "::error file=${claude_manifest},title=Version was not bumped::Plugin files changed but version is still '${head_version}'. Bump version in ${claude_manifest} and ${codex_manifest} so existing installs pick up this change."
             exit 1
           fi
 

@@ -1,7 +1,7 @@
 {
   "name": "vail-agent-assurance",
   "description": "VAIL Agent Assurance Engine for coding agents",
-  "owner": { "name": "Project VAIL", "url": "https://projectvail.org" },
+  "owner": { "name": "Project VAIL", "url": "https://projectvail.com" },
   "plugins": [
     {
       "name": "vail-agent-assurance",

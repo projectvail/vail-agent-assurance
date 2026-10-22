@@ -2,10 +2,12 @@
 
 Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent: upload an AI agent's source, scan it for vulnerability and control behaviors, generate probes that test them, and retrieve the results, without leaving your editor.
 
-This repository is a Claude Code plugin marketplace containing one plugin, `vail-agent-assurance`. It bundles:
+This repository is a plugin marketplace for Claude Code and Codex containing one plugin, `vail-agent-assurance`. It bundles:
 
 - a connection to VAIL's hosted MCP server at `https://agents.projectvail.com/mcp`, and
 - the `agent-assurance` skill, which explains the workflow to the coding agent.
+
+Hermes doesn't install plugins from this marketplace, but it can use the same MCP server and skill. See [Hermes](#hermes).
 
 Nothing runs on your machine: there is no local server or CLI to install, and you don't need AWS credentials. Your coding agent uploads files with its ordinary shell tools.
 
@@ -39,9 +41,20 @@ claude mcp add --scope user --transport http vail https://agents.projectvail.com
 
 The shell expands `$VAIL_TOKEN` before Claude Code sees it, so the token is saved in plain text in your Claude Code configuration. The plugin avoids that.
 
-## Codex
+## Install in Codex
 
-The MCP server and skill are not specific to Claude Code. In Codex, add the server to `~/.codex/config.toml`, with the token read from an environment variable:
+```sh
+export VAIL_TOKEN=vail_pat_...      # in the shell profile Codex starts from
+codex plugin marketplace add projectvail/vail-agent-assurance
+```
+
+Restart Codex, run `/plugins`, and install `vail-agent-assurance`. The plugin connects with `bearer_token_env_var = "VAIL_TOKEN"`, so the token is read from Codex's environment each time it starts and is never written to Codex's configuration. Codex has no secure prompt like Claude Code's, so the token is only as protected as the place that sets the variable. A secret manager (`export VAIL_TOKEN="$(security find-generic-password -s vail -w)"` on macOS) is better than writing the token into a dotfile.
+
+Codex reads `.codex-plugin/plugin.json` ahead of `.claude-plugin/plugin.json`, so the two manifests can differ in how they authenticate.
+
+### Without the plugin
+
+Add the server to `~/.codex/config.toml`, and copy the skill directory to `~/.agents/skills/agent-assurance/`:
 
 ```toml
 [mcp_servers.vail]
@@ -49,9 +62,16 @@ url = "https://agents.projectvail.com/mcp"
 bearer_token_env_var = "VAIL_TOKEN"
 ```
 
-To give Codex the workflow instructions too, copy the `plugins/vail-agent-assurance/skills/agent-assurance` directory into your Codex skills directory. Leave it as a folder named `agent-assurance` containing `SKILL.md`.
+## Hermes
 
-> Codex support has not been tested yet. Check the [Codex MCP documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli) for the current configuration format.
+[Hermes Agent](https://hermes-agent.nousresearch.com) has its own plugin format, which can't bundle an MCP server, so set up the two parts separately:
+
+```sh
+hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header
+hermes skills install projectvail/vail-agent-assurance/plugins/vail-agent-assurance/skills/agent-assurance
+```
+
+`hermes mcp add` asks for the token, saves it in `~/.hermes/.env` as `MCP_VAIL_API_KEY`, and writes only the reference `Authorization: Bearer ${MCP_VAIL_API_KEY}` into `~/.hermes/config.yaml`. Use `hermes skills update` to pick up new versions of the skill.
 
 ## What it can do
 
@@ -70,18 +90,25 @@ Connecting a live agent, and running, reviewing, approving, or scheduling probes
 ## Repository layout
 
 ```text
-.claude-plugin/marketplace.json                  the marketplace
+.claude-plugin/marketplace.json                  the marketplace (read by Claude Code and Codex)
 plugins/vail-agent-assurance/
-  .claude-plugin/plugin.json                     plugin manifest and MCP connection
-  skills/agent-assurance/SKILL.md                the workflow skill
+  .claude-plugin/plugin.json                     Claude Code manifest: token from userConfig
+  .codex-plugin/plugin.json                      Codex manifest: token from $VAIL_TOKEN
+  skills/agent-assurance/SKILL.md                the workflow skill, shared by all harnesses
 ```
 
-Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. Bump `version` in `plugin.json` for every release.
+Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. For every release, bump `version` in **both** manifests to the same value. CI checks this.
 
-The plugin always connects to production. To try skill changes against a local VAIL server, don't install the plugin. Instead, connect the local server with `claude mcp add` (as in [Without the plugin](#without-the-plugin), using `http://127.0.0.1:8099/mcp`), and copy the skill directory:
+The plugin always connects to production. To try skill changes against a local VAIL server, don't install the plugin. Instead, connect the local server directly and copy the skill directory:
+
+| Harness | Connect `http://127.0.0.1:8099/mcp` | Copy the skill to |
+|---|---|---|
+| Claude Code | `claude mcp add` (as in [Without the plugin](#without-the-plugin)) | `~/.claude/skills/agent-assurance/` |
+| Codex | a `[mcp_servers.vail]` entry in `~/.codex/config.toml` | `~/.agents/skills/agent-assurance/` |
+| Hermes | `hermes mcp add vail --url http://127.0.0.1:8099/mcp --auth header` | `~/.hermes/skills/agent-assurance/` |
 
 ```sh
 cp -R plugins/vail-agent-assurance/skills/agent-assurance ~/.claude/skills/
 ```
 
-The result is `~/.claude/skills/agent-assurance/SKILL.md`. Claude Code does not discover a `SKILL.md` placed directly in `~/.claude/skills/`. The server's README, under "Coding agents against a local server", explains how to run it.
+Keep the skill as a directory named `agent-assurance` containing `SKILL.md`. None of these harnesses discovers a `SKILL.md` placed directly in the skills directory. The server's README, under "Coding agents against a local server", explains how to run it.
