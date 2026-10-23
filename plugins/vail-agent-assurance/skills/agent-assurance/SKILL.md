@@ -17,13 +17,13 @@ These are **hypotheses generated from source**, not findings. A vulnerability be
 
 ## Before you start
 
-The user needs an existing VAIL organization (sign up at https://agents.projectvail.com) and a personal access token, created under **Access tokens** in the web app. The token is sent to `https://agents.projectvail.com/mcp` as an `Authorization: Bearer` header by the MCP connection, not by you.
+The user needs an existing VAIL organization (sign up at https://agents.projectvail.com) and a personal access token, created under **Access tokens** in the web app. The MCP connection authenticates against `https://agents.projectvail.com/mcp` with an `Authorization: Bearer` header holding that token; it is configured once, by the user, not by you.
 
 If the `vail` tools are missing or every call fails to authenticate, ask the user to create a token and configure it for their coding agent:
 
 - **Claude Code** (plugin): run `/plugin` and configure vail-agent-assurance. Claude Code keeps the token in secure storage.
 - **Codex** (plugin or `config.toml`): Codex reads the token from the `VAIL_TOKEN` environment variable. Set it in the environment Codex starts from, then restart Codex.
-- **Hermes**: run `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header` and enter the token when prompted. Hermes stores it in `~/.hermes/.env`.
+- **Hermes**: run `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header` and enter the token when prompted. Hermes stores it in its own secrets file, outside the config you might share.
 
 Never ask them to paste a token into the conversation, never write one into a file yourself, and never put one on a command line you run.
 

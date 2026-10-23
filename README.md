@@ -71,7 +71,7 @@ hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header
 hermes skills install projectvail/vail-agent-assurance/plugins/vail-agent-assurance/skills/agent-assurance
 ```
 
-`hermes mcp add` asks for the token, saves it in `~/.hermes/.env` as `MCP_VAIL_API_KEY`, and writes only the reference `Authorization: Bearer ${MCP_VAIL_API_KEY}` into `~/.hermes/config.yaml`. Use `hermes skills update` to pick up new versions of the skill.
+`hermes mcp add` asks for the token and saves it as `MCP_VAIL_API_KEY` in Hermes's own secrets file (kept apart from the shareable config, which gets only the reference `Authorization: Bearer ${MCP_VAIL_API_KEY}`). Use `hermes skills update` to pick up new versions of the skill.
 
 ## What it can do
 
