@@ -1,6 +1,6 @@
 # VAIL Agent Assurance for coding agents
 
-Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent: upload an AI agent's source, scan it for vulnerability and control behaviors, generate probes that test them, and retrieve the results, without leaving your editor.
+Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent: upload an AI agent's source, scan it for vulnerability and control behaviors, generate probes that test them, run steering experiments, inspect the results, and promote winning profiles as draft PRs from your editor.
 
 This repository is a plugin marketplace for Claude Code and Codex containing one plugin, `vail-agent-assurance`. It bundles:
 
@@ -9,7 +9,7 @@ This repository is a plugin marketplace for Claude Code and Codex containing one
 
 Hermes doesn't install plugins from this marketplace, but it can use the same MCP server and skill. See [Hermes](#hermes).
 
-Nothing runs on your machine: there is no local server or CLI to install, and you don't need AWS credentials. Your coding agent uploads files with its ordinary shell tools.
+VAIL runs scans and experiments on its server; there is no local VAIL server or CLI to install, and you do not need AWS credentials. Your coding agent uses its ordinary tools to inspect and update your agent repository, upload source, and submit connection credentials directly from a local environment or key file.
 
 ## Before you start
 
@@ -85,7 +85,26 @@ hermes skills install projectvail/vail-agent-assurance/plugins/vail-agent-assura
 | `get_agent_status`, `get_operation_status` | Follow progress, failures, and what to do next. |
 | `get_behaviors`, `get_probes` | Retrieve the complete current results as JSON. |
 
-Connecting a live agent, and running, reviewing, approving, or scheduling probes, happen in the VAIL web app.
+The experiment workflow also exposes:
+
+| Tools | Purpose |
+|---|---|
+| `get_steering_setup`, `validate_steering_contract` | Prepare a version-aware contract using the maintained skill/schema. |
+| `collect_github_source` | Collect a committed source revision for later Promote. |
+| `get_agent_connection`, `prepare_agent_connection` | Inspect a connection or securely submit/test a new direct endpoint. |
+| `create_experiment`, `get_experiment`, `save_experiment_case`, `remove_experiment_case` | Create and review the fixed probe bundle. |
+| `run_experiment`, `get_experiment_job`, `pause_experiment` | Run baseline and bounded optimization, follow progress, pause/resume. |
+| `set_experiment_profiles` | Configure manual comparisons when desired. |
+| `get_experiment_report`, `get_experiment_execution` | Inspect scores, comparisons and complete response evidence. |
+| `get_promotion`, `preview_promotion`, `publish_promotion` | Review the best eligible change and publish one draft PR. |
+
+For example: *"Set up steering for this agent, run a reviewed experiment on my test deployment with at most three candidates and a $1 proposal budget, and show me the results and Promote preview."* Remote agent costs are separate from the proposal budget. Add *"Promote the winner if it beats both baselines; don't merge it"* when you want PR publication authorized too.
+
+The [steering workflow skill](plugins/vail-agent-assurance/skills/agent-assurance/references/steering.md) covers source collection, connection, review, execution, retries and promotion. Execution happens in VAIL's durable workers, not in the editor process. Same-key launch retries recover the original job. Publication requires an immutable preview and a supported GitHub mapping. Native Hermes/OpenClaw promotion is not configured yet. VAIL never merges a PR or deploys the change.
+
+**Rollout:** these tools require the server changes in [probe-loop PR #42](https://github.com/projectvail/probe-loop/pull/42). Until that server version is deployed, updating the plugin alone does not enable execution; `get_identity` advertises the available capability set. Deploy the server before releasing this plugin version.
+
+Account/access-token creation, initial GitHub App authorization, and approval/scheduling of catalog probes for recurring monitoring remain in the web app. Existing verified connectors can run experiments; installing/initially configuring a connector and deploying agent code remain infrastructure setup.
 
 ## Repository layout
 
