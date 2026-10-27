@@ -1,7 +1,7 @@
 {
   "name": "vail-agent-assurance",
-  "version": "0.2.1",
-  "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine",
+  "version": "0.3.0",
+  "description": "Scan agents, run steering experiments, and promote winning profiles as draft PRs with VAIL",
   "author": { "name": "Project VAIL", "url": "https://projectvail.com" },
   "homepage": "https://agents.projectvail.com",
   "repository": "https://github.com/projectvail/vail-agent-assurance",
