@@ -147,7 +147,7 @@ Whatever you choose, record which checks came from AE and which from you, and wh
 
 Keep a record in the agent's repository, in `.vail/improvement/<agent_id>/<run_id>/`, where `run_id` is the run of AE's current results. The format is in [results-format.md](results-format.md).
 
-It can hold agent replies and internal data. Before writing it the first time, ask the user whether to add `.vail/` to `.gitignore`, and recommend it.
+It can hold agent replies and internal data. Before writing it the first time, check whether git already ignores `.vail/` (`git check-ignore -q .vail/`). If it does not, ask the user whether to add `.vail/` to `.gitignore`, and recommend it. If it does, say so, and confirm with the user that they want it kept out of version control.
 
 Write it after every user decision and every test run, so an interrupted session loses at most the step in progress. It is also how a later session picks up where this one stopped.
 
@@ -155,4 +155,4 @@ Write it after every user decision and every test run, so an interrupted session
 
 - Local results are evidence about this agent, with these models, in this environment, not proof. Say how many runs a conclusion rests on.
 - AE's behavior risks are hypotheses from source. A risk that a fair test never triggers may not be real; say so rather than forcing a fix.
-- When you are done, summarize what was fixed, dismissed, inconclusive, and not addressable, and where the results file is. Suggest uploading the updated source and scanning again with the `agent-assurance` skill.
+- When you are done, summarize what was fixed, dismissed, inconclusive, and not addressable, and where the results file is. Don't suggest scanning the updated source again or comparing against a new scan.
