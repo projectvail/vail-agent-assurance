@@ -1,0 +1,33 @@
+# Steering from the editor
+
+Use the same agent ID and experiment ID throughout. These tools act as the token's person within their organization. Initial account/token setup and GitHub App authorization remain in VAIL. Inspect `get_identity` and tool availability before assuming the server has this workflow.
+
+## Prepare the agent
+
+- `get_steering_setup` returns the maintained setup skill, schema and starters. Follow that skill in the agent repository: inspect the actual installed harness, declare bounded request controls, implement needed bindings, and test ordinary requests, changed profiles and isolation. `validate_steering_contract` validates structure/platform and returns canonical JSON plus the receipt digest. Static validation is not proof that a live deployment applies settings.
+- Collect `vail-steering.json` at the source root. For later Promote, use `collect_github_source` with the committed repository/ref, through VAIL's existing GitHub authorization. Uploads remain useful for local development but do not establish a PR destination. Source replacement makes generated results outdated; scan and regenerate before a new experiment. Existing frozen experiments remain intact.
+- Inspect `get_agent_connection`. A verified direct endpoint or existing connector can be used. New direct connections use `prepare_agent_connection` with endpoint, auth scheme and the platform fields listed by `get_agent_connection`. It returns a fixed URL and short-lived ticket. Use an HTTP client to POST JSON `{ticket, secret}` to that URL, reading `secret` directly from a local environment variable/key file. Omit it for no-auth or stored-key reuse. Do not print the key, include it in MCP arguments, commit it, or embed it in a shell command. The returned ticket is also temporary authorization; keep it out of logs and shared files. A successful submission sends one connection-test request and saves the connection. Reusing a ticket returns its recorded outcome. If interrupted, inspect connection state before preparing a new ticket.
+- Binding/deployment changes remain ordinary changes in the user's repository and infrastructure. Use the deployment they authorized. Preparing a contract alone does not authorize production changes, executing probes or publishing PRs.
+
+## Review and run
+
+1. Use `create_experiment` with a new ID, proposal budget and baseline repetitions. The comparison count can be chosen after baseline. Campaign spend bounds proposal-model calls only; remote agent costs are separate.
+2. `get_experiment` returns `delivery: inline` with `result`, or a complete JSON `download`. Fetch downloads and verify their SHA-256; never treat an abbreviated response as the full case list. Review actual messages, metric definitions, measurement limits and behavior/requirement links.
+3. For each selected case, call `save_experiment_case` with the existing key, current revision and the case fields (`role`, `split`, `fixture_set`, `probe`, `success_keys`, `review`, `authorized_action`). Choose real non-consistency metric keys as completion checks and explain why they represent success. When a probe requests legitimate work, verify completion as well as safety: no forbidden tool call does not establish that a lookup or calculation was answered. Add missing completion checks grounded in the actual response/tool schema before freezing; keep the safety requirements. If this gap is discovered after a run, preserve it and create a newly reviewed experiment rather than changing frozen criteria or treating its safety-only score as task success. Remove unwanted cases with `remove_experiment_case`. Use each returned revision for the next edit. State-changing acceptance cases need explicit action authorization and an appropriate test deployment. Never relax checks just to improve a score.
+4. `run_experiment` with `phase: baseline` queues work and freezes reviewed cases. Use a fresh `request_key` for each intended launch. Poll `get_experiment_job` with its job ID every 30–60 seconds; scan/probe-generation operation IDs instead use `get_operation_status`.
+5. Inspect `get_experiment_report`. Use `get_experiment_execution` with IDs from `execution_index` to examine failed checks, responses, tool traces and profile receipts. Failed executions and missing scores are not passes.
+6. Choose comparison repetitions, then `run_experiment` with `phase: steering`, `comparison_repetitions`, and a bounded `sweep` such as `{max_candidates: 3, patience: 2}`. Omit methods to use the agent's integration. The loop retains gains, uses equal candidate/fresh-baseline repetitions, and stops at 100% or its limits. For an explicitly requested manual comparison, `set_experiment_profiles` then `phase: comparison` uses the same checks.
+
+Review/execute according to the user's authorization, including authorization already given for the full flow; do not manufacture a new approval at every step. If only setup was requested, report setup results without launching experiments.
+
+## Retry, pause and inspect
+
+A lost launch response is retried with the **same request_key and identical arguments**. This returns the same job even after completion. A new key is a new intended launch, including resuming paused work; do not generate one just because a response was lost. `pause_experiment` waits for the current execution to finish. Completed evidence is retained. Get the latest revision before an edit or explicit resume and keep the frozen comparison/sweep settings.
+
+Stop on repeated errors or an exhausted budget and report the evidence. Do not claim a 100% probe score proves general reliability; report counts, fresh-baseline results, regressions and acceptance-only confirmation limits.
+
+## Promote
+
+Use `get_promotion` for the report's winning profile. Only the best complete profile above both original and fresh baselines can qualify. A GitHub source and a supported repository mapping are required. Native Hermes/OpenClaw request fields do not currently have that mapping; report the returned reason instead of inventing an untested patch.
+
+`preview_promotion` returns an immutable diff, score evidence and plan ID. Present the change and measurement limitations. If the user authorized promotion (including earlier in the task), `publish_promotion` with that exact plan ID creates a draft PR. If publication authorization is absent, request it against the concrete preview. Retry the same plan after a lost response to recover the existing PR. Link the result. VAIL never merges or deploys it. Changed source or a different winner may invalidate an earlier preview; obtain a fresh one and review the changed result.
