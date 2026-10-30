@@ -118,7 +118,7 @@ plugins/vail-agent-assurance/
 
 Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. For every release, bump `version` in **both** manifests to the same value. CI checks this.
 
-The plugin always connects to production. To try skill changes against a local VAIL server, don't install the plugin. Instead, connect the local server directly and copy the skill directory:
+The published plugin connects to production. To test only skill changes against a local VAIL server, connect the local server directly and copy the skill directory:
 
 | Harness | Connect `http://127.0.0.1:8099/mcp` | Copy the skill to |
 |---|---|---|
@@ -131,3 +131,7 @@ cp -R plugins/vail-agent-assurance/skills/agent-assurance ~/.claude/skills/
 ```
 
 Keep the skill as a directory named `agent-assurance` containing `SKILL.md`. None of these harnesses discovers a `SKILL.md` placed directly in the skills directory. The server's README, under "Coding agents against a local server", explains how to run it.
+
+For a full local plugin-package test, make a disposable copy of this marketplace, give it a unique marketplace name, and change the copied manifest's MCP URL to the isolated local server. Install that copy through the host's plugin installer and use a token for a fresh test organization. Keep the published manifests pointed at production. Remove the temporary installation when the test is complete. This exercises skill loading and MCP tools in the actual host; direct HTTP MCP calls alone do not establish plugin-host compatibility.
+
+Codex may request tool approval when source collection replaces existing source or an experiment invokes a remote agent. A noninteractive `approval_policy = "never"` can reject a tool that still requires approval; it does not grant every tool permission. For an explicitly authorized unattended sandbox test, configure only the required plugin-scoped tool permissions before launching the host, following [Codex's installed server policy documentation](https://developers.openai.com/plugins/build/plugins#configure-installed-server-policy). Keep publication disabled unless the test explicitly includes it. Interactive users can approve the requested operation through the host's normal approval flow.
