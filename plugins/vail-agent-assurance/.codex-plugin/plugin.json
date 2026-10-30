@@ -1,6 +1,6 @@
 {
   "name": "vail-agent-assurance",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Scan agents, run steering experiments, and promote winning profiles as draft PRs with VAIL",
   "author": { "name": "Project VAIL", "url": "https://projectvail.com" },
   "homepage": "https://agents.projectvail.com",
