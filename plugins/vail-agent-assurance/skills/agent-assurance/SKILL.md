@@ -1,6 +1,6 @@
 ---
 name: agent-assurance
-description: Scan agent source and generate probes with VAIL, set up steering contracts, run reviewed baseline and optimization experiments, and promote a winning profile as a draft PR. Use for VAIL onboarding, assurance results, steering, and promotion.
+description: Scan agent source and generate probes with VAIL, set up steering contracts, run reviewed experiments, and promote winning profiles as draft PRs. Use for VAIL onboarding, assurance results, steering, and promotion. For local source fixes based on VAIL results, use agent-improvement.
 ---
 
 # VAIL Agent Assurance Engine
@@ -89,4 +89,4 @@ Save results to files only when the user asks, and where they ask.
 
 The steering tools review and execute the experiment case bundle; they do not approve the source catalog for recurring monitoring or schedule recurring probes. Account/access-token creation and initial GitHub App authorization still happen in VAIL. Deploying an agent and installing its connector use the user's own infrastructure. VAIL never merges promotion PRs or deploys their changes.
 
-To test and fix the agent locally from these results, use the `agent-improvement` skill. Once probes are retrieved, offer it to the user.
+For local source fixes based on these results, use the [agent-improvement skill](../agent-improvement/SKILL.md). It tests behavior risks with VAIL's grading package and helps the user change agent code. Steering instead compares request settings and produces a tested profile. Choose the workflow that fits the user's request. If the user only requested probes, present the results and offer the relevant next step without starting it.
