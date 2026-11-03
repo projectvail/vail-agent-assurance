@@ -1,6 +1,6 @@
 ---
 name: agent-assurance
-description: Use VAIL Agent Assurance Engine to scan an AI agent's source for unintended behaviors and generate test probes. Use when the user asks to scan, assess, or generate probes or test cases for an agent with VAIL or the Assurance Engine, to upload or replace an agent's source in VAIL, or to check on or retrieve VAIL behaviors and probes.
+description: Scan agent source and generate probes with VAIL, set up steering contracts, run reviewed experiments, and promote winning profiles as draft PRs. Use for VAIL onboarding, assurance results, steering, and promotion. For local source fixes based on VAIL results, use agent-improvement.
 ---
 
 # VAIL Agent Assurance Engine
@@ -13,7 +13,7 @@ The Assurance Engine reads an AI agent's source (its prompts, tool definitions, 
 - **Control behaviors**: things the agent must keep doing correctly, such as confirming before a refund or refusing out-of-scope requests.
 - **Probes**: test cases for those behaviors. A probe has a message (often with placeholders filled from shared *option pools*), and the metrics that judge the agent's reply.
 
-These are **hypotheses generated from source**, not findings. A vulnerability behavior means the source suggests a risk worth testing, not that the agent is vulnerable. Only running the probes against the agent establishes how it behaves: live, in the VAIL web app, or locally, through the `agent-improvement` skill. Say this when presenting results.
+These are **hypotheses generated from source**, not findings. A vulnerability behavior means the source suggests a risk worth testing, not that the agent is vulnerable. Only running the probes against the agent establishes how it behaves. Run them through the VAIL web app, through MCP experiments when the server advertises them, or locally through the `agent-improvement` skill. Say this when presenting results.
 
 ## Before you start
 
@@ -27,7 +27,7 @@ If the `vail` tools are missing or every call fails to authenticate, ask the use
 
 Never ask them to paste a token into the conversation, never write one into a file yourself, and never put one on a command line you run.
 
-Call `get_identity` first to confirm which organization you are acting in.
+Call `get_identity` first to confirm which organization you are acting in and which capabilities the server offers. For steering setup, experiments or Promote, read [the steering workflow](references/steering.md). If the server does not advertise the required tools, explain that it needs the server update; do not claim the plugin can execute an unavailable action.
 
 ## Choosing the agent
 
@@ -87,6 +87,6 @@ Save results to files only when the user asks, and where they ask.
 
 ## What this does not do
 
-These tools do not connect to the live agent, run or review probes, approve or reject them, or schedule them. Those happen in the VAIL web app at https://agents.projectvail.com; point the user there for them.
+The steering tools review and execute the experiment case bundle; they do not approve the source catalog for recurring monitoring or schedule recurring probes. Account/access-token creation and initial GitHub App authorization still happen in VAIL. Deploying an agent and installing its connector use the user's own infrastructure. VAIL never merges promotion PRs or deploys their changes.
 
-To test and fix the agent locally from these results, use the `agent-improvement` skill. Once probes are retrieved, offer it to the user.
+For local source fixes based on these results, use the [agent-improvement skill](../agent-improvement/SKILL.md). It tests behavior risks with VAIL's grading package and helps the user change agent code. Steering instead compares request settings and produces a tested profile. Choose the workflow that fits the user's request. If the user only requested probes, present the results and offer the relevant next step without starting it.
