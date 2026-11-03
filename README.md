@@ -5,7 +5,8 @@ Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your 
 This repository is a plugin marketplace for Claude Code and Codex containing one plugin, `vail-agent-assurance`. It bundles:
 
 - a connection to VAIL's hosted MCP server at `https://agents.projectvail.com/mcp`, and
-- the `agent-assurance` skill, which explains the workflow to the coding agent.
+- the `agent-assurance` skill, which explains the workflow to the coding agent, and
+- the `agent-improvement` skill, which works through an agent's behavior risks with you: testing them against the agent running locally, graded as VAIL grades them, and fixing what the tests show.
 
 Hermes doesn't install plugins from this marketplace, but it can use the same MCP server and skill. See [Hermes](#hermes).
 
@@ -54,7 +55,7 @@ Codex reads `.codex-plugin/plugin.json` ahead of `.claude-plugin/plugin.json`, s
 
 ### Without the plugin
 
-Add the server to `~/.codex/config.toml`, and copy the skill directory to `~/.agents/skills/agent-assurance/`:
+Add the server to `~/.codex/config.toml`, and copy the skill directories to `~/.agents/skills/agent-assurance/` and `~/.agents/skills/agent-improvement/`:
 
 ```toml
 [mcp_servers.vail]
@@ -69,6 +70,7 @@ bearer_token_env_var = "VAIL_TOKEN"
 ```sh
 hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header
 hermes skills install projectvail/vail-agent-assurance/plugins/vail-agent-assurance/skills/agent-assurance
+hermes skills install projectvail/vail-agent-assurance/plugins/vail-agent-assurance/skills/agent-improvement
 ```
 
 `hermes mcp add` asks for the token and saves it as `MCP_VAIL_API_KEY` in Hermes's own secrets file (kept apart from the shareable config, which gets only the reference `Authorization: Bearer ${MCP_VAIL_API_KEY}`). Use `hermes skills update` to pick up new versions of the skill.
@@ -84,6 +86,7 @@ hermes skills install projectvail/vail-agent-assurance/plugins/vail-agent-assura
 | `generate_probes`, `set_generation_limits` | Write probes for those behaviors. |
 | `get_agent_status`, `get_operation_status` | Follow progress, failures, and what to do next. |
 | `get_behaviors`, `get_probes` | Retrieve the complete current results as JSON. |
+| `get_grading_package` | Download `vail-grading`, the package VAIL grades probe replies with, to test probes against an agent running locally (LangGraph, Hermes, or OpenClaw). |
 
 The experiment workflow also exposes:
 
@@ -106,6 +109,8 @@ The [steering workflow skill](plugins/vail-agent-assurance/skills/agent-assuranc
 
 Account/access-token creation, initial GitHub App authorization, and approval/scheduling of catalog probes for recurring monitoring remain in the web app. Existing verified connectors can run experiments; installing/initially configuring a connector and deploying agent code remain infrastructure setup.
 
+Testing probes locally, with the `agent-improvement` skill, needs only your coding agent and a local copy of the agent.
+
 ## Repository layout
 
 ```text
@@ -114,6 +119,7 @@ plugins/vail-agent-assurance/
   .claude-plugin/plugin.json                     Claude Code manifest: token from userConfig
   .codex-plugin/plugin.json                      Codex manifest: token from $VAIL_TOKEN
   skills/agent-assurance/SKILL.md                the workflow skill, shared by all harnesses
+  skills/agent-improvement/                      testing and fixing an agent locally from its results
 ```
 
 Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. For every release, bump `version` in **both** manifests to the same value. CI checks this.
@@ -122,15 +128,15 @@ The published plugin connects to production. To test only skill changes against 
 
 | Harness | Connect `http://127.0.0.1:8099/mcp` | Copy the skill to |
 |---|---|---|
-| Claude Code | `claude mcp add` (as in [Without the plugin](#without-the-plugin)) | `~/.claude/skills/agent-assurance/` |
-| Codex | a `[mcp_servers.vail]` entry in `~/.codex/config.toml` | `~/.agents/skills/agent-assurance/` |
-| Hermes | `hermes mcp add vail --url http://127.0.0.1:8099/mcp --auth header` | `~/.hermes/skills/agent-assurance/` |
+| Claude Code | `claude mcp add` (as in [Without the plugin](#without-the-plugin)) | `~/.claude/skills/<skill>/` |
+| Codex | a `[mcp_servers.vail]` entry in `~/.codex/config.toml` | `~/.agents/skills/<skill>/` |
+| Hermes | `hermes mcp add vail --url http://127.0.0.1:8099/mcp --auth header` | `~/.hermes/skills/<skill>/` |
 
 ```sh
-cp -R plugins/vail-agent-assurance/skills/agent-assurance ~/.claude/skills/
+cp -R plugins/vail-agent-assurance/skills/agent-assurance plugins/vail-agent-assurance/skills/agent-improvement ~/.claude/skills/
 ```
 
-Keep the skill as a directory named `agent-assurance` containing `SKILL.md`. None of these harnesses discovers a `SKILL.md` placed directly in the skills directory. The server's README, under "Coding agents against a local server", explains how to run it.
+Keep each skill as a directory of its own name containing `SKILL.md`. None of these harnesses discovers a `SKILL.md` placed directly in the skills directory. The server's README, under "Coding agents against a local server", explains how to run it.
 
 For a full local plugin-package test, make a disposable copy of this marketplace, give it a unique marketplace name, and change the copied manifest's MCP URL to the isolated local server. Install that copy through the host's plugin installer and use a token for a fresh test organization. Keep the published manifests pointed at production. Remove the temporary installation when the test is complete. This exercises skill loading and MCP tools in the actual host; direct HTTP MCP calls alone do not establish plugin-host compatibility.
 

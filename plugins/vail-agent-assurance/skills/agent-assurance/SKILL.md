@@ -13,7 +13,7 @@ The Assurance Engine reads an AI agent's source (its prompts, tool definitions, 
 - **Control behaviors**: things the agent must keep doing correctly, such as confirming before a refund or refusing out-of-scope requests.
 - **Probes**: test cases for those behaviors. A probe has a message (often with placeholders filled from shared *option pools*), and the metrics that judge the agent's reply.
 
-These are **hypotheses generated from source**, not findings. A vulnerability behavior means the source suggests a risk worth testing, not that the agent is vulnerable. Only running the probes against the live agent establishes how it behaves. Experiment execution is available through MCP when the server advertises it. Say this when presenting results.
+These are **hypotheses generated from source**, not findings. A vulnerability behavior means the source suggests a risk worth testing, not that the agent is vulnerable. Only running the probes against the agent establishes how it behaves. Run them through the VAIL web app, through MCP experiments when the server advertises them, or locally through the `agent-improvement` skill. Say this when presenting results.
 
 ## Before you start
 
@@ -88,3 +88,5 @@ Save results to files only when the user asks, and where they ask.
 ## What this does not do
 
 The steering tools review and execute the experiment case bundle; they do not approve the source catalog for recurring monitoring or schedule recurring probes. Account/access-token creation and initial GitHub App authorization still happen in VAIL. Deploying an agent and installing its connector use the user's own infrastructure. VAIL never merges promotion PRs or deploys their changes.
+
+To test and fix the agent locally from these results, use the `agent-improvement` skill. Once probes are retrieved, offer it to the user.
