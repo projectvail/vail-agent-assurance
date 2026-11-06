@@ -5,7 +5,7 @@ description: Use VAIL Agent Assurance Engine to scan an AI agent's source for un
 
 # VAIL Agent Assurance Engine
 
-The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test prompts that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP server's tools. Depending on the coding agent, they may appear with a prefix, such as `mcp__vail__get_identity` in Claude Code and Codex or `mcp_vail_get_identity` in Hermes; this skill uses the bare names.
+The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test prompts that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP server's tools. Depending on the coding agent, they may appear with a prefix, such as `mcp__vail__get_identity` in Claude Code and Codex as well as in Hermes; this skill uses the bare names.
 
 ## What the results mean
 
@@ -23,7 +23,7 @@ If the `vail` tools are missing or every call fails to authenticate, ask the use
 
 - **Claude Code** (plugin): run `/plugin` and configure vail-agent-assurance. Claude Code keeps the token in secure storage.
 - **Codex** (plugin or `config.toml`): Codex reads the token from the `VAIL_TOKEN` environment variable. Set it in the environment Codex starts from, then restart Codex.
-- **Hermes**: run `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header` and enter the token when prompted. Hermes stores it in its own secrets file, outside the config you might share.
+- **Hermes** (plugin): run `hermes config set VAIL_TOKEN <token>`, or enter it in the plugin's settings in Hermes Desktop, then start a new session. Hermes stores it in its own secrets file, outside the config you might share. Without the plugin, `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header` asks for the token instead.
 
 Never ask them to paste a token into the conversation, never write one into a file yourself, and never put one on a command line you run.
 

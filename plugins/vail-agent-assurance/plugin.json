@@ -1,0 +1,35 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "vail-agent-assurance",
+  "version": "0.4.0",
+  "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine",
+  "author": {
+    "name": "Project VAIL",
+    "url": "https://projectvail.com"
+  },
+  "homepage": "https://agents.projectvail.com",
+  "repository": "https://github.com/projectvail/vail-agent-assurance",
+  "keywords": [
+    "ai-agents",
+    "assurance",
+    "testing",
+    "security",
+    "mcp"
+  ],
+  "extensions": {
+    "com.nousresearch.hermes": {
+      "config_schema": {
+        "vail_token": {
+          "type": "secret",
+          "env": "VAIL_TOKEN",
+          "description": "Your VAIL personal access token (vail_pat_...), created under Access tokens at agents.projectvail.com"
+        }
+      },
+      "servers": {
+        "vail": {
+          "timeout": 300
+        }
+      }
+    }
+  }
+}
