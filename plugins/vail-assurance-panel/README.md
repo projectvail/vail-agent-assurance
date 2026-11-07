@@ -11,7 +11,7 @@ hermes plugins install projectvail/vail-agent-assurance/plugins/vail-assurance-p
 hermes config set VAIL_TOKEN vail_pat_...
 ```
 
-Then, in Hermes Desktop, switch on **VAIL Agent Assurance** under **Capabilities → Plugins** (a package's Desktop half is off until you turn it on), and open **Assurance** in the sidebar.
+Then, in Hermes Desktop, switch on **VAIL Assurance Panel** under **Capabilities → Plugins** (a package's Desktop half is off until you turn it on), and open **Assurance** in the sidebar.
 
 `VAIL_TOKEN` is the same personal access token the `vail-agent-assurance` plugin uses, created under **Access tokens** at agents.projectvail.com. It is stored in your profile's `.env`, never in `config.yaml`.
 

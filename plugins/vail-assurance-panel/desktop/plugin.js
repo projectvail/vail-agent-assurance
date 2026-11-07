@@ -338,7 +338,7 @@ function AssurancePage({ ctx }) {
 
 export default {
   id: 'vail-assurance-panel',
-  name: 'VAIL Agent Assurance',
+  name: 'VAIL Assurance Panel',
   register(ctx) {
     ctx.registerMany([
       { id: 'page', area: ROUTES_AREA, data: { path: PATH }, render: () => jsx(AssurancePage, { ctx }) },
