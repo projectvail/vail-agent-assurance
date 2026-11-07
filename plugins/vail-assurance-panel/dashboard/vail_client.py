@@ -130,6 +130,31 @@ class VailClient:
         return json.loads(body)
 
 
+def post_multipart(url: str, fields: dict, filename: str, data: bytes, *, timeout: float = 120.0) -> None:
+    """Send one file to a VAIL upload URL: every field as a form field, then the file last as `file`."""
+    import uuid
+
+    boundary = "----vail" + uuid.uuid4().hex
+    parts = []
+    for key, value in (fields or {}).items():
+        parts.append(f'--{boundary}\r\nContent-Disposition: form-data; name="{key}"\r\n\r\n{value}\r\n'.encode())
+    parts.append(
+        f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{filename}"\r\n'
+        f"Content-Type: application/octet-stream\r\n\r\n".encode()
+    )
+    body = b"".join(parts) + data + f"\r\n--{boundary}--\r\n".encode()
+    request = urllib.request.Request(url, data=body, method="POST",
+                                     headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            response.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read()[:300].decode("utf-8", "replace")
+        raise VailError(f"Upload refused (HTTP {exc.code}): {detail}", status=exc.code, code="upload") from None
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise VailError(f"Upload failed: {getattr(exc, 'reason', exc)}", code="upload") from None
+
+
 def _parse_body(body: str, content_type: str, request_id: Any) -> dict | None:
     if "text/event-stream" in content_type:
         reply = None

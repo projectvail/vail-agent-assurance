@@ -1,6 +1,6 @@
 name: vail-assurance-panel
-version: 0.1.0
-description: "Hermes Desktop page showing VAIL Agent Assurance results for every Hermes profile: behavior risks, probes, and whether a profile changed since it was last scanned."
+version: 0.2.0
+description: "Hermes Desktop page to scan every Hermes profile with the VAIL Agent Assurance Engine and see its behavior risks, probes, and whether it changed since the last scan."
 author: Project VAIL
 kind: standalone
 requires_hermes: ">=0.23.0"

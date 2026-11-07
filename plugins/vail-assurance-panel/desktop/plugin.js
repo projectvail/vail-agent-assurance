@@ -3,7 +3,14 @@
 import {
   Badge,
   Button,
+  Checkbox,
   Codicon,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   EmptyState,
   ErrorState,
   Loader,
@@ -54,8 +61,17 @@ function Muted({ children, className = '' }) {
   return jsx('span', { className: `text-(--ui-text-tertiary) ${className}`, children })
 }
 
+const ACTIVE = job => job && job.phase !== 'done' && job.phase !== 'failed'
+
+function sentence(text) {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : ''
+}
+
 function profileStatus(profile) {
   const vail = profile.vail
+  const job = profile.job
+  if (ACTIVE(job)) return { tone: 'warn', label: `${sentence(job.phase)}…`, busy: true, detail: job.progress }
+  if (job && job.phase === 'failed') return { tone: 'bad', label: 'Scan failed', detail: job.error }
   if (!profile.link) return { tone: 'muted', label: 'Not linked to VAIL' }
   if (!vail || vail.error) return { tone: 'bad', label: vail?.error || 'Unavailable' }
   if (vail.active_operation) return { tone: 'warn', label: `${vail.active_operation}…` }
@@ -157,7 +173,7 @@ function LinkControl({ profile, agents, onLink }) {
   })
 }
 
-function ProfileRow({ ctx, profile, agents, onLink }) {
+function ProfileRow({ ctx, profile, agents, onLink, onScan }) {
   const [open, setOpen] = useState(false)
   const status = profileStatus(profile)
   const vail = profile.vail
@@ -188,10 +204,21 @@ function ProfileRow({ ctx, profile, agents, onLink }) {
             ]
           }),
           jsxs('div', {
-            className: 'flex min-w-44 items-center gap-1.5 text-xs',
-            children: [jsx(StatusDot, { tone: status.tone }), jsx('span', { className: 'text-(--ui-text-secondary)', children: status.label })]
+            className: 'flex min-w-44 max-w-72 flex-col gap-0.5 text-xs',
+            children: [
+              jsxs('div', {
+                className: 'flex items-center gap-1.5',
+                children: [
+                  status.busy ? jsx(Loader, { className: 'size-3' }) : jsx(StatusDot, { tone: status.tone }),
+                  jsx('span', { className: 'text-(--ui-text-secondary)', children: status.label })
+                ]
+              }),
+              status.detail ? jsx(Muted, { className: 'line-clamp-2 text-[0.6875rem]', children: status.detail }) : null
+            ]
           }),
-          vail && !vail.error
+          ACTIVE(profile.job)
+            ? jsx(Muted, { className: 'min-w-56 text-[0.6875rem]', children: 'Results appear when the scan finishes' })
+            : vail && !vail.error
             ? jsxs('div', {
                 className: 'flex min-w-56 flex-col gap-1',
                 children: [
@@ -211,6 +238,17 @@ function ProfileRow({ ctx, profile, agents, onLink }) {
             className: 'ml-auto flex items-center gap-1',
             children: profile.link
               ? [
+                  jsx(
+                    Button,
+                    {
+                      size: 'xs',
+                      variant: profile.changed_since_scan || profile.vail?.outdated ? 'default' : 'outline',
+                      disabled: ACTIVE(profile.job),
+                      onClick: () => onScan(profile),
+                      children: [jsx(Codicon, { name: 'shield' }), 'Rescan']
+                    },
+                    'rescan'
+                  ),
                   ready &&
                     jsx(
                       Button,
@@ -224,7 +262,19 @@ function ProfileRow({ ctx, profile, agents, onLink }) {
                     ),
                   jsx(Button, { size: 'xs', variant: 'ghost', onClick: () => onLink(profile.name, null), children: 'Unlink' }, 'unlink')
                 ]
-              : [jsx(LinkControl, { profile, agents, onLink }, 'link')]
+              : [
+                  jsx(LinkControl, { profile, agents, onLink }, 'link'),
+                  jsx(
+                    Button,
+                    {
+                      size: 'xs',
+                      disabled: ACTIVE(profile.job),
+                      onClick: () => onScan(profile),
+                      children: [jsx(Codicon, { name: 'shield' }), 'Scan with VAIL']
+                    },
+                    'scan'
+                  )
+                ]
           })
         ]
       }),
@@ -233,10 +283,153 @@ function ProfileRow({ ctx, profile, agents, onLink }) {
   })
 }
 
+// -- scan review ------------------------------------------------------------------------------------
+
+function kb(bytes) {
+  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(bytes < 10240 ? 1 : 0)} KB`
+}
+
+function ScanDialog({ ctx, profile, vailHost, onClose, onStarted }) {
+  const [preview, setPreview] = useState({ loading: true })
+  const [probes, setProbes] = useState(true)
+  const [starting, setStarting] = useState(false)
+  const [showSkipped, setShowSkipped] = useState(false)
+
+  useEffect(() => {
+    let live = true
+    ctx
+      .rest(`/profiles/${encodeURIComponent(profile.name)}/package`)
+      .then(data => live && setPreview({ data }))
+      .catch(error => live && setPreview({ error: String(error?.message || error) }))
+    return () => {
+      live = false
+    }
+  }, [ctx, profile.name])
+
+  const start = () => {
+    setStarting(true)
+    ctx
+      .rest(`/profiles/${encodeURIComponent(profile.name)}/scan`, {
+        method: 'POST',
+        body: { generate_probes: probes },
+        timeoutMs: 180000
+      })
+      .then(() => {
+        host.notify({ kind: 'info', message: `Scanning ${profile.name} with VAIL` })
+        onStarted()
+      })
+      .catch(error => {
+        setStarting(false)
+        host.notify({ kind: 'error', message: `Could not start the scan: ${error?.message || error}` })
+      })
+  }
+
+  const data = preview.data
+  let content
+  if (preview.loading) content = jsx('div', { className: 'flex justify-center py-6', children: jsx(Loader, {}) })
+  else if (preview.error) content = jsx(Muted, { className: 'block py-3 text-xs', children: preview.error })
+  else {
+    content = jsxs('div', {
+      className: 'flex min-h-0 flex-col gap-3 text-xs',
+      children: [
+        jsxs('div', {
+          className: 'flex flex-wrap gap-x-4 gap-y-1 text-(--ui-text-secondary)',
+          children: [
+            jsx('span', { children: `${data.file_count} file${data.file_count === 1 ? '' : 's'} · ${kb(data.archive_bytes)} archive` }),
+            jsx('span', {
+              children: data.redactions
+                ? `${data.redactions} secret-looking value${data.redactions === 1 ? '' : 's'} replaced with <redacted>`
+                : 'No secret-looking values found'
+            }),
+            data.skipped.length ? jsx('span', { children: `${data.skipped.length} left out` }) : null
+          ]
+        }),
+        jsx('div', {
+          className: 'max-h-56 overflow-y-auto rounded-[4px] border border-(--ui-stroke-secondary) px-2 py-1.5 font-mono text-[0.6875rem]',
+          children: data.files.map(file =>
+            jsxs(
+              'div',
+              {
+                className: 'flex justify-between gap-3 py-px',
+                children: [
+                  jsx('span', { className: 'truncate text-(--ui-text-secondary)', children: file.path }),
+                  jsx(Muted, { className: 'shrink-0', children: file.redactions ? `${file.redactions} redacted` : kb(file.size) })
+                ]
+              },
+              file.path
+            )
+          )
+        }),
+        data.skipped.length
+          ? jsxs('div', {
+              children: [
+                jsx(Button, {
+                  size: 'xs',
+                  variant: 'ghost',
+                  onClick: () => setShowSkipped(value => !value),
+                  children: `${showSkipped ? 'Hide' : 'Show'} what is left out (${data.skipped.length})`
+                }),
+                showSkipped
+                  ? jsx('div', {
+                      className: 'mt-1 max-h-32 overflow-y-auto font-mono text-[0.6875rem]',
+                      children: data.skipped.map(item =>
+                        jsx(Muted, { className: 'block truncate', children: `${item.path} · ${item.reason}` }, item.path)
+                      )
+                    })
+                  : null
+              ]
+            })
+          : null,
+        jsxs('label', {
+          className: 'flex cursor-pointer items-center gap-2 text-(--ui-text-secondary)',
+          children: [jsx(Checkbox, { checked: probes, onCheckedChange: value => setProbes(value === true) }), 'Generate probes when the scan finishes']
+        }),
+        jsx(Muted, {
+          className: 'text-[0.6875rem] leading-4',
+          children:
+            'Never included: .env, auth files, sessions, memories, logs, databases, hidden files, and skills bundled with Hermes. ' +
+            (profile.link ? 'This replaces the source of the linked VAIL agent.' : `A new Hermes agent named "${profile.name} (Hermes profile)" is created on VAIL.`)
+        })
+      ]
+    })
+  }
+
+  return jsx(Dialog, {
+    open: true,
+    onOpenChange: open => {
+      if (!open && !starting) onClose()
+    },
+    children: jsxs(DialogContent, {
+      className: 'w-[min(40rem,92vw)] gap-4 p-5',
+      children: [
+        jsxs(DialogHeader, {
+          children: [
+            jsx(DialogTitle, { children: `Scan ${profile.name} with VAIL` }),
+            jsx(DialogDescription, { children: `These files are uploaded to ${vailHost}. Review them before you start.` })
+          ]
+        }),
+        content,
+        jsxs(DialogFooter, {
+          children: [
+            jsx(Button, { variant: 'outline', size: 'sm', disabled: starting, onClick: onClose, children: 'Cancel' }),
+            jsx(Button, {
+              size: 'sm',
+              disabled: starting || !data || !data.file_count,
+              onClick: start,
+              children: starting ? 'Uploading…' : 'Upload and scan'
+            })
+          ]
+        })
+      ]
+    })
+  })
+}
+
 // -- the page -------------------------------------------------------------------------------------
 
 function AssurancePage({ ctx }) {
   const [state, setState] = useState({ loading: true })
+  const [scanning, setScanning] = useState(null)
 
   const load = useCallback(
     (refresh = false) => {
@@ -252,6 +445,15 @@ function AssurancePage({ ctx }) {
   useEffect(() => {
     load(false)
   }, [load])
+
+  // Live progress: the backend broadcasts each scan step; poll as well, since events can be missed.
+  useEffect(() => ctx.onEvent('plugin.vail-assurance-panel.scan.updated', () => load(false)), [ctx, load])
+  const anyActive = (state.view?.profiles || []).some(profile => ACTIVE(profile.job))
+  useEffect(() => {
+    if (!anyActive || state.loading) return undefined
+    const timer = setTimeout(() => load(false), 8000)
+    return () => clearTimeout(timer)
+  }, [anyActive, state.loading, state.view, load])
 
   const onLink = useCallback(
     (profile, agentId) =>
@@ -283,7 +485,7 @@ function AssurancePage({ ctx }) {
   } else {
     body = jsx('div', {
       className: 'flex flex-col gap-2',
-      children: profiles.map(profile => jsx(ProfileRow, { ctx, profile, agents: view.agents, onLink }, profile.name))
+      children: profiles.map(profile => jsx(ProfileRow, { ctx, profile, agents: view.agents, onLink, onScan: setScanning }, profile.name))
     })
   }
 
@@ -330,7 +532,19 @@ function AssurancePage({ ctx }) {
               ].map(text => jsx('span', { children: text }, text))
             })
           : null,
-        body
+        body,
+        scanning
+          ? jsx(ScanDialog, {
+              ctx,
+              profile: scanning,
+              vailHost: hostOf(view?.vail?.url),
+              onClose: () => setScanning(null),
+              onStarted: () => {
+                setScanning(null)
+                load(false)
+              }
+            })
+          : null
       ]
     })
   })

@@ -32,9 +32,12 @@ def _load(name: str):
 
 vail_client = _load("vail_client")
 fleet = _load("fleet")
+package = _load("package")
+scan = _load("scan")
 
 router = APIRouter()
 _cache = fleet.TTLCache(seconds=120)
+_jobs = scan.ScanJobs()
 
 
 def _settings() -> dict:
@@ -66,9 +69,55 @@ def _links():
     return fleet.LinkStore(Path(plugin_data_dir(PLUGIN_ID)) / "links.json")
 
 
+def _profile_home(name: str) -> Path:
+    homes = dict(fleet.profile_dirs(_root()))
+    if name not in homes:
+        raise HTTPException(status_code=404, detail=f"No Hermes profile named {name!r}")
+    return homes[name]
+
+
 @router.get("/fleet")
 def get_fleet(refresh: bool = False):
-    return fleet.build_fleet(_root(), _links(), _client, _cache, vail_url=_vail_url(), refresh=refresh)
+    jobs = _jobs.all()
+    if any(job.get("phase") not in ("done", "failed") for job in jobs.values()):
+        refresh = True  # a scan is moving: show VAIL's current state, not the cache
+    view = fleet.build_fleet(_root(), _links(), _client, _cache, vail_url=_vail_url(), refresh=refresh)
+    for profile in view["profiles"]:
+        if profile["name"] in jobs:
+            profile["job"] = jobs[profile["name"]]
+    return view
+
+
+@router.get("/profiles/{name}/package")
+def preview_package(name: str):
+    """Exactly what a scan would upload for this profile, before anything is sent."""
+    return package.build_package(name, _profile_home(name)).summary()
+
+
+class ScanBody(BaseModel):
+    generate_probes: bool = True
+
+
+@router.post("/profiles/{name}/scan")
+def start_scan(name: str, body: ScanBody):
+    home = _profile_home(name)
+
+    def on_change(profile: str, job: dict) -> None:
+        _cache.clear()
+        try:
+            from hermes_cli.plugin_events import broadcast_plugin_event
+
+            broadcast_plugin_event(PLUGIN_ID, "scan.updated", {"profile": profile, "phase": job.get("phase")})
+        except Exception:  # noqa: BLE001 - the page also polls while a scan runs
+            pass
+
+    try:
+        job = scan.start_scan(profile=name, home=home, client=_client(), links=_links(), jobs=_jobs,
+                              package_module=package, upload=vail_client.post_multipart,
+                              generate_probes=body.generate_probes, on_change=on_change)
+    except scan.ScanError as exc:
+        raise HTTPException(status_code=409 if "already running" in str(exc) else 502, detail=str(exc)) from None
+    return {"ok": True, "job": job}
 
 
 class LinkBody(BaseModel):
