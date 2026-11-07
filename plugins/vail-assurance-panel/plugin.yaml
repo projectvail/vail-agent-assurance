@@ -1,0 +1,15 @@
+name: vail-assurance-panel
+version: 0.1.0
+description: "Hermes Desktop page showing VAIL Agent Assurance results for every Hermes profile: behavior risks, probes, and whether a profile changed since it was last scanned."
+author: Project VAIL
+kind: standalone
+requires_hermes: ">=0.23.0"
+config_schema:
+  vail_url:
+    type: str
+    default: "https://agents.projectvail.com/mcp"
+    description: "VAIL MCP endpoint. Change it only to use a local VAIL server."
+  vail_token:
+    type: secret
+    env: VAIL_TOKEN
+    description: "Your VAIL personal access token (vail_pat_...), created under Access tokens at agents.projectvail.com"
