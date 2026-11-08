@@ -80,6 +80,18 @@ The tools appear as `mcp__vail__<tool>`, and the skills as `vail-agent-assurance
 
 What the plugin does on your machine: it connects to `https://agents.projectvail.com/mcp` with your token. When you ask it to scan an agent, Hermes uploads that agent's source files to VAIL. It runs no background process and stores nothing besides the token.
 
+### The assurance panel for Hermes Desktop
+
+A second Hermes plugin, [`vail-assurance-panel`](plugins/vail-assurance-panel/), adds an **Assurance** page to Hermes Desktop: every Hermes profile (each bot) with its VAIL results, a one-click **Scan with VAIL** that shows exactly which files would be uploaded before sending them, and whether a profile changed since its last scan. It uses the same `VAIL_TOKEN`.
+
+```sh
+hermes plugins install projectvail/vail-agent-assurance/plugins/vail-assurance-panel --enable
+```
+
+Then switch on **VAIL Assurance Panel** under **Capabilities → Plugins** in Hermes Desktop. See its [README](plugins/vail-assurance-panel/README.md).
+
+[`examples/trust-safety-desk`](examples/trust-safety-desk/) is a team of four Hermes bots to try both plugins on.
+
 ## What it can do
 
 | Tool | What it does |
@@ -105,9 +117,12 @@ plugins/vail-agent-assurance/
   plugin.json, mcp.json                          Hermes manifest (Agent Plugins v1): token from VAIL_TOKEN in Hermes's .env
   skills/agent-assurance/SKILL.md                the workflow skill, shared by all harnesses
   skills/agent-improvement/                      testing and fixing an agent locally from its results
+plugins/vail-assurance-panel/                    Hermes Desktop page and its backend (a native Hermes plugin)
+examples/trust-safety-desk/                      four Hermes bots that work as a team, with stub tools
+tests/                                           tests for the panel's profile packaging (python -m pytest tests/)
 ```
 
-Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. Validate the Hermes package with `hermes plugins validate ./plugins/vail-agent-assurance`. For every release, bump `version` in **all three** manifests to the same value. CI checks this.
+Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. Validate the Hermes package with `hermes plugins validate ./plugins/vail-agent-assurance`. For every release, bump `version` in **all three** manifests to the same value. CI checks this. Validate the panel with `hermes plugins validate ./plugins/vail-assurance-panel`.
 
 The plugin always connects to production. To try skill changes against a local VAIL server, don't install the plugin. Instead, connect the local server directly and copy the skill directory:
 
