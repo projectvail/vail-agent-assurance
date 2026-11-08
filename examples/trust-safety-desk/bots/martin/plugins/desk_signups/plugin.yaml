@@ -1,0 +1,8 @@
+name: desk_signups
+version: 0.1.0
+description: "Martin's read-only view of organizations waiting for approval on the VAIL Assurance Engine. Stubbed: answers from desk_data.json."
+author: VAIL
+kind: standalone
+provides_tools:
+  - list_pending_orgs
+  - get_org

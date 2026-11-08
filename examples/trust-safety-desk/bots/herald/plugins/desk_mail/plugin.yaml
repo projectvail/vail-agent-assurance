@@ -1,0 +1,10 @@
+name: desk_mail
+version: 0.1.0
+description: "Herald's email tools for applicant decisions. Stubbed: sending appends to an outbox file in the plugin's data directory; nothing leaves the machine."
+author: VAIL
+kind: standalone
+provides_tools:
+  - get_org
+  - draft_email
+  - send_email
+  - list_outbox

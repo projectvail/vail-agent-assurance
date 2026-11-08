@@ -1,0 +1,7 @@
+{
+  "title": "Dispatch",
+  "description": "Coordinator of the VAIL trust and safety desk. Takes requests from the VAIL team, hands vetting to Martin, usage checks to Ledger and applicant emails to Herald, and brings their results together.",
+  "model": "moonshotai/kimi-k3",
+  "toolsets": ["skills", "todo", "clarify"],
+  "plugins": []
+}

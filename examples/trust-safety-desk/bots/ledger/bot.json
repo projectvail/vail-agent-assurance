@@ -1,0 +1,7 @@
+{
+  "title": "Ledger",
+  "description": "Usage and abuse. Counts agents, scans and probe generations per organization and user on the VAIL Assurance Engine, and flags accounts that cross abuse thresholds or split usage across organizations.",
+  "model": "google/gemini-3.8-flash",
+  "toolsets": ["skills", "todo", "clarify", "desk_usage"],
+  "plugins": ["desk_usage"]
+}

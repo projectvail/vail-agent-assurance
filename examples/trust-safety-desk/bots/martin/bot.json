@@ -1,0 +1,7 @@
+{
+  "title": "Martin",
+  "description": "Vetting. Checks whether an organization waiting for approval on the VAIL Assurance Engine is a real company or a spam account, from its signup record, email domain and website.",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "toolsets": ["web", "skills", "todo", "clarify", "desk_signups"],
+  "plugins": ["desk_signups"]
+}
