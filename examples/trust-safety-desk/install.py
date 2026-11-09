@@ -79,6 +79,11 @@ def write_config(path: Path, bot: dict, api: str, key_env: str) -> None:
         "agent:",
         "  disabled_toolsets:",
         *[f"    - {name}" for name in disabled],
+        # A bot this small needs no tool search, and calling its tools directly (rather than through
+        # tool_call) keeps each call visible by name to graders such as VAIL's.
+        "tools:",
+        "  tool_search:",
+        "    enabled: off",
         "plugins:",
         "  enabled:",
         *[f"    - {name}" for name in bot["plugins"]],
