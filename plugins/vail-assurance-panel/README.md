@@ -4,6 +4,8 @@ A Hermes Desktop page for assuring every Hermes profile with the [VAIL Agent Ass
 
 It complements the `vail-agent-assurance` plugin, which gives the Hermes agent VAIL's tools and skills for scanning and fixing agents. This plugin is the view across all of them.
 
+![Every Hermes profile with its VAIL results; Herald fixed locally](docs/team-overview.png)
+
 ## Install
 
 ```sh
@@ -22,8 +24,13 @@ Each profile is a row.
 - **Scan with VAIL** packages the profile, shows you exactly which files would be uploaded (and what is left out, and any values it redacted), and after you confirm, creates a Hermes agent for it on VAIL, uploads the files, scans them, and generates probes. The row shows progress; a scan takes a few minutes. **Rescan** does the same for a linked profile, replacing its agent's source; it is highlighted when the profile changed since the last scan.
 - **Link** connects a profile to an agent that is already on VAIL (the panel suggests a Hermes agent whose name matches).
 - **View risks** lists each risk with the tools involved and its probes.
+- **Local test results.** When you test and fix a profile with the `vail-agent-assurance` plugin's `agent-improvement` skill, it keeps a record in the profile (`.vail/improvement/`). The row then shows how many risks were fixed locally and probes passing before and after the fix, and each risk is marked fixed, tested, or not addressed yet. A fix changes the profile, so the row asks you to rescan to confirm with VAIL.
 
 **Refresh** fetches current results from VAIL; otherwise results are cached for two minutes.
+
+![A profile's risks, each marked with what the improvement loop did about it](docs/risks-and-local-fixes.png)
+
+![The review before a scan: exactly which files are uploaded](docs/scan-review.png)
 
 ### What a scan uploads
 
