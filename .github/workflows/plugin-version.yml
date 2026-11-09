@@ -25,6 +25,7 @@ jobs:
           plugin_dir="plugins/vail-agent-assurance"
           claude_manifest="$plugin_dir/.claude-plugin/plugin.json"
           codex_manifest="$plugin_dir/.codex-plugin/plugin.json"
+          hermes_manifest="$plugin_dir/plugin.json"
 
           version_at() {
             local rev="$1" manifest="$2"
@@ -38,10 +39,16 @@ jobs:
           claude_version="$(version_at HEAD "$claude_manifest")"
           codex_version="$(version_at HEAD "$codex_manifest")"
           echo "Claude Code manifest version: ${claude_version:-<none>}"
+          hermes_version="$(version_at HEAD "$hermes_manifest")"
           echo "Codex manifest version: ${codex_version:-<none>}"
+          echo "Hermes manifest version: ${hermes_version:-<none>}"
 
           if [ "$claude_version" != "$codex_version" ]; then
             echo "::error file=${codex_manifest},title=Manifest versions differ::${claude_manifest} declares '${claude_version:-<none>}' but ${codex_manifest} declares '${codex_version:-<none>}'. Keep them the same."
+            exit 1
+          fi
+          if [ "$claude_version" != "$hermes_version" ]; then
+            echo "::error file=${hermes_manifest},title=Manifest versions differ::${claude_manifest} declares '${claude_version:-<none>}' but ${hermes_manifest} declares '${hermes_version:-<none>}'. Keep them the same."
             exit 1
           fi
 
@@ -66,7 +73,7 @@ jobs:
           fi
 
           if [ "$base_version" = "$head_version" ]; then
-            echo "::error file=${claude_manifest},title=Version was not bumped::Plugin files changed but version is still '${head_version}'. Bump version in ${claude_manifest} and ${codex_manifest} so existing installs pick up this change."
+            echo "::error file=${claude_manifest},title=Version was not bumped::Plugin files changed but version is still '${head_version}'. Bump version in ${claude_manifest}, ${codex_manifest} and ${hermes_manifest} so existing installs pick up this change."
             exit 1
           fi
 

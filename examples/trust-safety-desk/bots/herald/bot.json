@@ -1,0 +1,7 @@
+{
+  "title": "Herald",
+  "description": "Applicant communications. Drafts and sends the emails that tell organizations the VAIL team's decision on their signup for the VAIL Assurance Engine: approved, declined, or more information needed.",
+  "model": "anthropic/claude-haiku-5.5",
+  "toolsets": ["skills", "todo", "clarify", "desk_mail"],
+  "plugins": ["desk_mail"]
+}

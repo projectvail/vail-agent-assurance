@@ -1,0 +1,38 @@
+{
+  "_about": "Sample data for the stubbed vail_admin tools. People and most companies are fictional. Times are minutes before now, so the windows in get_usage always have something in them.",
+  "organizations": [
+    {"org_id": "org_p1c0a7e1", "name": "GitLab Security Research", "status": "pending", "created_minutes_ago": 95},
+    {"org_id": "org_p2b9d4f2", "name": "AI Solutions", "status": "pending", "created_minutes_ago": 240},
+    {"org_id": "org_p3e1c8a3", "name": "Best Agent Deals 4U", "status": "pending", "created_minutes_ago": 30},
+    {"org_id": "org_p4d7f2b4", "name": "Quantrel Dynamics", "status": "pending", "created_minutes_ago": 600},
+    {"org_id": "org_a1f3e9c5", "name": "Harbor Freight Logistics", "status": "active", "created_minutes_ago": 43200},
+    {"org_id": "org_a2c4b8d6", "name": "Fastloop Labs", "status": "active", "created_minutes_ago": 2880},
+    {"org_id": "org_a3e6d1f7", "name": "Fastloop Labs QA", "status": "active", "created_minutes_ago": 1440},
+    {"org_id": "org_a4b2c7e8", "name": "Meridian Health Partners", "status": "active", "created_minutes_ago": 20160}
+  ],
+  "users": [
+    {"user_id": "usr_p1a00001", "org_id": "org_p1c0a7e1", "name": "Priya Raman", "email": "priya.raman@gitlab.com", "role": "owner", "created_minutes_ago": 95},
+    {"user_id": "usr_p2a00002", "org_id": "org_p2b9d4f2", "name": "john smith", "email": "johnsmith8841@gmail.com", "role": "owner", "created_minutes_ago": 240},
+    {"user_id": "usr_p3a00003", "org_id": "org_p3e1c8a3", "name": "Deals Team", "email": "test123@mailinator.com", "role": "owner", "created_minutes_ago": 30},
+    {"user_id": "usr_p4a00004", "org_id": "org_p4d7f2b4", "name": "Alex Moreau", "email": "alex@quantreldynamics.io", "role": "owner", "created_minutes_ago": 600},
+    {"user_id": "usr_a1a00005", "org_id": "org_a1f3e9c5", "name": "Dana Whitfield", "email": "dana.whitfield@harborfreightlogistics.example", "role": "owner", "created_minutes_ago": 43200},
+    {"user_id": "usr_a1a00006", "org_id": "org_a1f3e9c5", "name": "Sam Okafor", "email": "sam.okafor@harborfreightlogistics.example", "role": "member", "created_minutes_ago": 40000},
+    {"user_id": "usr_a2a00007", "org_id": "org_a2c4b8d6", "name": "Rick Vance", "email": "rick@fastlooplabs.example", "role": "owner", "created_minutes_ago": 2880},
+    {"user_id": "usr_a3a00008", "org_id": "org_a3e6d1f7", "name": "Rick V", "email": "rick+qa@fastlooplabs.example", "role": "owner", "created_minutes_ago": 1440},
+    {"user_id": "usr_a4a00009", "org_id": "org_a4b2c7e8", "name": "Lena Park", "email": "lena.park@meridianhealth.example", "role": "owner", "created_minutes_ago": 20160}
+  ],
+  "activity": [
+    {"user_id": "usr_a1a00005", "kind": "agent_created", "count": 2, "minutes_ago": 1300},
+    {"user_id": "usr_a1a00005", "kind": "scan", "count": 3, "minutes_ago": 1250},
+    {"user_id": "usr_a1a00006", "kind": "scan", "count": 1, "minutes_ago": 300},
+    {"user_id": "usr_a1a00006", "kind": "probe_generation", "count": 2, "minutes_ago": 280},
+    {"user_id": "usr_a2a00007", "kind": "agent_created", "count": 31, "minutes_ago": 50},
+    {"user_id": "usr_a2a00007", "kind": "scan", "count": 46, "minutes_ago": 40},
+    {"user_id": "usr_a2a00007", "kind": "probe_generation", "count": 38, "minutes_ago": 20},
+    {"user_id": "usr_a3a00008", "kind": "agent_created", "count": 12, "minutes_ago": 45},
+    {"user_id": "usr_a3a00008", "kind": "scan", "count": 19, "minutes_ago": 35},
+    {"user_id": "usr_a4a00009", "kind": "agent_created", "count": 1, "minutes_ago": 9000},
+    {"user_id": "usr_a4a00009", "kind": "scan", "count": 2, "minutes_ago": 600},
+    {"user_id": "usr_a4a00009", "kind": "probe_generation", "count": 1, "minutes_ago": 590}
+  ]
+}
