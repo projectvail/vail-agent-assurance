@@ -75,9 +75,27 @@ function profileStatus(profile) {
   if (!profile.link) return { tone: 'muted', label: 'Not linked to VAIL' }
   if (!vail || vail.error) return { tone: 'bad', label: vail?.error || 'Unavailable' }
   if (vail.active_operation) return { tone: 'warn', label: `${vail.active_operation}…` }
+  if (profile.local?.fixed && profile.changed_since_scan) return { tone: 'good', label: 'Fixed locally · rescan to confirm' }
   if (vail.outdated || profile.changed_since_scan) return { tone: 'warn', label: 'Changed since last scan' }
   if (vail.risks && (vail.risks.critical || vail.risks.high)) return { tone: 'bad', label: STAGE_LABEL[vail.stage] || vail.stage }
   return { tone: 'good', label: STAGE_LABEL[vail.stage] || vail.stage }
+}
+
+function LocalTests({ local }) {
+  if (!local || (!local.tested && !local.fixed)) return null
+  const parts = []
+  if (local.with_after) parts.push(`probes passing ${local.passing_before}/${local.tested} → ${local.passing_after}/${local.with_after}`)
+  else if (local.tested) parts.push(`probes passing ${local.passing_before}/${local.tested}`)
+  if (local.dismissed) parts.push(`${local.dismissed} not addressed yet`)
+  if (local.updated_at) parts.push(age(local.updated_at))
+  if (local.stale) parts.push('from earlier VAIL results')
+  return jsxs('div', {
+    className: 'flex flex-wrap items-center gap-1.5 text-[0.6875rem]',
+    children: [
+      jsx(Badge, { variant: local.fixed ? 'success' : 'muted', size: 'xs', children: local.fixed ? `${local.fixed} fixed locally` : 'tested locally' }),
+      jsx(Muted, { children: parts.join(' · ') })
+    ]
+  })
 }
 
 function RiskBadges({ vail }) {
@@ -93,18 +111,27 @@ function RiskBadges({ vail }) {
   return jsx('div', { className: 'flex flex-wrap items-center gap-1', children: items })
 }
 
-function RiskList({ ctx, agentId }) {
+function localBadge(local) {
+  if (!local) return null
+  const score = local.after ? ` · checks ${local.before ? `${local.before[0]}/${local.before[1]} → ` : ''}${local.after[0]}/${local.after[1]}` : local.before ? ` · checks ${local.before[0]}/${local.before[1]}` : ''
+  if (local.state === 'fixed') return jsx(Badge, { variant: 'success', size: 'xs', children: `fixed locally${score}` })
+  if (local.state === 'tested') return jsx(Badge, { variant: 'warn', size: 'xs', children: `tested locally${score}` })
+  if (local.state === 'dismissed') return jsx(Badge, { variant: 'muted', size: 'xs', children: 'not addressed yet' })
+  return null
+}
+
+function RiskList({ ctx, agentId, profile }) {
   const [state, setState] = useState({ loading: true })
   useEffect(() => {
     let live = true
     ctx
-      .rest(`/agents/${encodeURIComponent(agentId)}/risks`)
+      .rest(`/agents/${encodeURIComponent(agentId)}/risks${profile ? `?bot=${encodeURIComponent(profile)}` : ''}`)
       .then(data => live && setState({ risks: data.risks }))
       .catch(error => live && setState({ error: String(error?.message || error) }))
     return () => {
       live = false
     }
-  }, [ctx, agentId])
+  }, [ctx, agentId, profile])
 
   if (state.loading) return jsx('div', { className: 'py-3', children: jsx(Loader, {}) })
   if (state.error) return jsx(Muted, { className: 'block py-2 text-xs', children: state.error })
@@ -122,7 +149,8 @@ function RiskList({ ctx, agentId }) {
               className: 'flex items-start gap-2',
               children: [
                 jsx(Badge, { variant: SEVERITY_VARIANT[risk.severity] || 'muted', children: risk.severity }),
-                jsx('span', { className: 'text-xs font-medium text-(--ui-text-primary)', children: risk.title })
+                jsx('span', { className: 'flex-1 text-xs font-medium text-(--ui-text-primary)', children: risk.title }),
+                localBadge(risk.local)
               ]
             }),
             risk.description && jsx(Muted, { className: 'text-xs leading-5', children: risk.description }),
@@ -223,6 +251,7 @@ function ProfileRow({ ctx, profile, agents, onLink, onScan }) {
                 className: 'flex min-w-56 flex-col gap-1',
                 children: [
                   jsx(RiskBadges, { vail }),
+                  jsx(LocalTests, { local: profile.local }),
                   jsx(Muted, {
                     className: 'text-[0.6875rem]',
                     children: [
@@ -278,7 +307,7 @@ function ProfileRow({ ctx, profile, agents, onLink, onScan }) {
           })
         ]
       }),
-      open && profile.link ? jsx(RiskList, { ctx, agentId: profile.link }) : null
+      open && profile.link ? jsx(RiskList, { ctx, agentId: profile.link, profile: profile.name }) : null
     ]
   })
 }

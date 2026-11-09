@@ -134,6 +134,7 @@ def summarize_agent(client: Any, agent_id: str) -> dict[str, Any]:
         "platform": status.get("platform"),
         "stage": status.get("stage"),
         "outdated": bool(results.get("outdated")),
+        "run_id": results.get("run_id"),
         "scanned_at": source.get("collected_at"),
         "active_operation": (status.get("active_operation") or {}).get("label"),
         "risks": {severity: 0 for severity in SEVERITIES},
@@ -230,9 +231,81 @@ class TTLCache:
             self._items.clear()
 
 
+# -- local hardening (the agent-improvement skill's record) --------------------------------------
+
+def _improvement_record(home: Path, agent_id: str, vail_run_id: str | None) -> tuple[Path, dict] | None:
+    """The record for this VAIL agent in the profile: the one for VAIL's current results, else the newest."""
+    base = home / ".vail" / "improvement" / agent_id
+    if not base.is_dir():
+        return None
+    files = [path for path in base.glob("*/results.json") if path.is_file()]
+    if not files:
+        return None
+    current = [path for path in files if path.parent.name == vail_run_id]
+    path = current[0] if current else max(files, key=lambda item: item.stat().st_mtime)
+    try:
+        return path, json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _run_score(run: dict) -> tuple[int, int]:
+    grades = [item.get("final_grade", item.get("ae_grade")) for item in run.get("metric_results") or []]
+    grades += [item.get("passed") for item in run.get("own_check_results") or []]
+    return sum(1 for grade in grades if grade is True), len(grades)
+
+
+def risk_hardening(result: dict) -> dict[str, Any]:
+    """One behavior risk's local outcome: its state, and checks passing before and after the fix."""
+    runs = result.get("runs") or []
+    before = [run for run in runs if run.get("agent_state") == "before_fix"]
+    after = [run for run in runs if run.get("agent_state") == "after_fix"]
+    fix = result.get("fix") or {}
+    if result.get("decision") == "dismissed":
+        state = "dismissed"
+    elif result.get("conclusion") == "fix_applied" or fix.get("status") == "applied":
+        state = "fixed"
+    elif runs:
+        state = "tested"
+    else:
+        state = "pending"
+    out: dict[str, Any] = {"state": state}
+    if before:
+        out["before"] = _run_score(before[-1])
+    if after:
+        out["after"] = _run_score(after[-1])
+    return out
+
+
+def local_hardening(home: Path, agent_id: str, vail_run_id: str | None) -> dict[str, Any] | None:
+    """Summary of the profile's agent-improvement record for this VAIL agent, if there is one."""
+    found = _improvement_record(home, agent_id, vail_run_id)
+    if found is None:
+        return None
+    path, record = found
+    risks = {item.get("behavior_id"): risk_hardening(item) for item in record.get("results") or [] if item.get("behavior_id")}
+    tested = [risk for risk in risks.values() if "before" in risk or "after" in risk]
+    def passing(key: str) -> int:
+        return sum(1 for risk in tested if key in risk and risk[key][1] and risk[key][0] == risk[key][1])
+    run_id = (record.get("ae") or {}).get("run_id") or path.parent.name
+    return {
+        "run_id": run_id,
+        "stale": bool(vail_run_id and run_id != vail_run_id),
+        "updated_at": _iso(path.stat().st_mtime),
+        "fixed": sum(1 for risk in risks.values() if risk["state"] == "fixed"),
+        "dismissed": sum(1 for risk in risks.values() if risk["state"] == "dismissed"),
+        "tested": len(tested),
+        "passing_before": passing("before"),
+        "passing_after": passing("after"),
+        "with_after": sum(1 for risk in tested if "after" in risk),
+        "risks": risks,
+    }
+
+
 def build_fleet(root: Path, links: LinkStore, client_factory: Callable[[], Any], cache: TTLCache,
                 *, vail_url: str, refresh: bool = False) -> dict[str, Any]:
-    profiles = [describe_profile(name, home) for name, home in profile_dirs(root)]
+    homes = dict(profile_dirs(root))
+    profiles = [describe_profile(name, home) for name, home in homes.items()]
     linked = links.load()
     view: dict[str, Any] = {"vail": {"url": vail_url, "connected": False}, "profiles": profiles, "agents": []}
     try:
@@ -264,6 +337,10 @@ def build_fleet(root: Path, links: LinkStore, client_factory: Callable[[], Any],
         except Exception as exc:  # noqa: BLE001 - one agent's failure must not hide the others
             summary = {"agent_id": agent_id, "error": str(exc)}
         profile["vail"] = summary
+        try:
+            profile["local"] = local_hardening(homes[profile["name"]], agent_id, summary.get("run_id"))
+        except Exception:  # noqa: BLE001 - a malformed record must not hide the row
+            profile["local"] = None
         scanned = _parse_iso(summary.get("scanned_at"))
         changed = _parse_iso(profile.get("changed_at"))
         profile["changed_since_scan"] = bool(scanned and changed and changed > scanned)

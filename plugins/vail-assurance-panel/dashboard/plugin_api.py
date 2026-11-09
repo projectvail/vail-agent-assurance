@@ -135,10 +135,20 @@ def set_link(body: LinkBody):
 
 
 @router.get("/agents/{agent_id}/risks")
-def get_risks(agent_id: str, refresh: bool = False):
+def get_risks(agent_id: str, refresh: bool = False, bot: str | None = None):
+    # `bot`, not `profile`: Hermes uses ?profile= itself to route a plugin request to a profile's backend.
+    profile = bot
     try:
         client = _client()
         risks = _cache.get(f"risks:{agent_id}", lambda: fleet.risk_details(client, agent_id), fresh=refresh)
     except vail_client.VailError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from None
+    local = None
+    if profile:
+        homes = dict(fleet.profile_dirs(_root()))
+        if profile in homes:
+            local = fleet.local_hardening(homes[profile], agent_id, None)
+    if local:
+        for risk in risks:
+            risk["local"] = local["risks"].get(risk["id"])
     return {"agent_id": agent_id, "risks": risks}
