@@ -3,8 +3,7 @@
   "mcpServers": {
     "vail": {
       "type": "streamable-http",
-      "url": "https://agents.projectvail.com/mcp",
-      "headers": { "Authorization": "Bearer ${VAIL_TOKEN}" }
+      "url": "https://agents.projectvail.com/mcp"
     }
   }
 }

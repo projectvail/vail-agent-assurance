@@ -15,7 +15,7 @@ hermes config set VAIL_TOKEN vail_pat_...
 
 Then, in Hermes Desktop, switch on **VAIL Assurance Panel** under **Capabilities → Plugins** (a package's Desktop half is off until you turn it on), and open **Assurance** in the sidebar.
 
-`VAIL_TOKEN` is the same personal access token the `vail-agent-assurance` plugin uses, created under **Access tokens** at agents.projectvail.com. It is stored in your profile's `.env`, never in `config.yaml`.
+`VAIL_TOKEN` is a personal access token created under **Access tokens** at <https://agents.projectvail.com/settings/tokens> (used by this Desktop panel's background API; the `vail-agent-assurance` MCP plugin authenticates separately with OAuth 2.1). Enter it in the plugin's settings form in Hermes Desktop or with `hermes config set`: it is stored in your profile's `.env`, never in `config.yaml`.
 
 ## Using it
 

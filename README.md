@@ -1,94 +1,128 @@
 # VAIL Agent Assurance for coding agents
 
-Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent: upload an AI agent's source, scan it for vulnerability and control behaviors, generate probes that test them, and retrieve the results, without leaving your editor.
+Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent: upload an AI agent's source, scan it for vulnerability and control behaviors, generate probes that test them, retrieve the results, and test and harden the agent locally—without leaving your editor.
 
-This repository is a plugin marketplace for Claude Code and Codex, and a Hermes Agent plugin, containing one plugin, `vail-agent-assurance`. It bundles:
+This repository packages `vail-agent-assurance` as a plugin marketplace for **Claude** and **Codex**, and as a portable [Agent Plugins v1](https://agent-plugins.org) package for **Hermes Agent**. The hosted MCP server at `https://agents.projectvail.com/mcp` authenticates with **OAuth 2.1** (and also accepts personal access tokens for headless or CI scripts), so it works out of the box across every major coding harness.
 
-- a connection to VAIL's hosted MCP server at `https://agents.projectvail.com/mcp`, and
-- the `agent-assurance` skill, which explains the workflow to the coding agent, and
-- the `agent-improvement` skill, which works through an agent's behavior risks with you: testing them against the agent running locally, graded as VAIL grades them, and fixing what the tests show.
+It bundles:
 
-The same plugin directory is also a Hermes Agent plugin. See [Install in Hermes](#install-in-hermes).
+- a connection to VAIL's hosted MCP server at `https://agents.projectvail.com/mcp` (OAuth 2.1),
+- the `agent-assurance` skill, which guides your coding agent through uploading, scanning, generating probes, and retrieving results, and
+- the `agent-improvement` skill, which works through an agent's behavior risks with you: testing them against a local copy of the agent, graded the exact way VAIL grades them, and fixing what the tests show.
 
-Nothing runs on your machine: there is no local server or CLI to install, and you don't need AWS credentials. Your coding agent uploads files with its ordinary shell tools.
+There is no local MCP server or VAIL CLI to install, and you don't need AWS credentials. Your coding agent uploads files with its ordinary shell tools. Only the `agent-improvement` skill installs anything: VAIL's Python grading wheel (`vail-grading`), into a virtual environment of its own. [What the plugin sends and downloads](plugins/vail-agent-assurance/README.md#what-the-plugin-sends-and-downloads) lists it all.
+
+## Supported platforms
+
+### Coding harnesses (where you use VAIL)
+
+| Coding platform | Plugin / skills bundle | MCP connection | Authentication |
+|---|---|---|---|
+| **Claude Code** (CLI, VS Code, Desktop) | Yes (`vail-agent-assurance` plugin) | `https://agents.projectvail.com/mcp` | OAuth 2.1 in browser (`/mcp` or `claude mcp login`) |
+| **Claude on the web & Cowork** (`claude.ai`) | Yes (Anthropic Directory plugin + connector) | `https://agents.projectvail.com/mcp` | OAuth 2.1 in browser |
+| **OpenAI Codex** (CLI, IDE extension, ChatGPT desktop) | Yes (`vail-agent-assurance` plugin) | `https://agents.projectvail.com/mcp` | OAuth 2.1 in browser (`/mcp` or `codex mcp login`) |
+| **ChatGPT** (Web & Work) | Yes (OpenAI Plugins Directory) | `https://agents.projectvail.com/mcp` | OAuth 2.1 in browser |
+| **OpenCode** | Copy `skills/` (optional) | `opencode mcp add vail --url https://agents.projectvail.com/mcp` | OAuth 2.1 in browser (default; `/mcps` or `opencode mcp auth vail`) |
+| **Cursor** | Copy `skills/` to `~/.cursor/skills/` (optional) | `~/.cursor/mcp.json` (`"url": "https://agents.projectvail.com/mcp"`) | OAuth 2.1 in browser (Connect in Cursor MCP settings) |
+| **Hermes Agent & Hermes Desktop** | Yes (`vail-agent-assurance` + `vail-assurance-panel`) | `https://agents.projectvail.com/mcp` | OAuth 2.1 (`hermes mcp login vail`); PAT for the Desktop fleet panel |
+
+### Target AI agent frameworks (what VAIL scans and grades)
+
+- **Source scanning & probe generation (all 7 platforms):** `langgraph` (LangGraph), `hermes` (Hermes Agent), `openclaw` (OpenClaw), `pi` (Pi), `agentforce` (Salesforce Agentforce), `servicenow` (ServiceNow), and `http` (any custom HTTP agent).
+- **Local probe execution & deterministic grading (`vail-grading` / `agent-improvement` skill):** **LangGraph**, **Hermes**, and **OpenClaw** (matching the platforms VAIL can also connect to and probe live on a schedule in the web app).
 
 ## Before you start
 
-1. You need a VAIL organization. Sign up at <https://agents.projectvail.com>.
-2. Create a personal access token: sign in, open **Access tokens**, choose a name and an expiry, and copy the token (`vail_pat_...`). It is shown only once.
+You need a VAIL organization. Sign up at <https://agents.projectvail.com>. When you connect from any coding agent below, your browser opens VAIL to confirm which account and organization to authorize. You can review or revoke connected apps at any time under **Access tokens** in the VAIL web app.
 
-A token acts as you: it can do what you can in your organization, and stops working if it is revoked, if it expires, or if you leave the organization. Use one token per device or tool.
+*(For headless environments, SSH boxes without port forwarding, CI pipelines, or the Hermes Desktop panel, you can also create a personal access token under **Access tokens** at <https://agents.projectvail.com/settings/tokens>.)*
 
-## Install in Claude Code
+## Install in Claude Code (and Claude / Cowork)
 
 ```text
 /plugin marketplace add projectvail/vail-agent-assurance
 /plugin install vail-agent-assurance@vail-agent-assurance
 ```
 
-Claude Code asks for your VAIL access token when the plugin is enabled, and keeps it in your system's secure credential store, not in a settings file. To change it later, run `/plugin` and configure `vail-agent-assurance`.
+Then run `/mcp`, select `vail`, and complete the OAuth sign-in in your browser (or run `claude mcp login plugin:vail-agent-assurance:vail` in your terminal).
 
-Then ask Claude Code, for example: *"Scan the agent in ./support-bot with VAIL and show me the behaviors it finds."*
+Ask Claude Code, for example: *"Scan the agent in ./support-bot with VAIL and show me the behaviors it finds."*
 
 ### Without the plugin
 
-You can connect the MCP server alone. Put the token in an environment variable rather than typing it into the command:
-
 ```sh
-export VAIL_TOKEN=vail_pat_...
-claude mcp add --scope user --transport http vail https://agents.projectvail.com/mcp \
-  --header "Authorization: Bearer $VAIL_TOKEN"
+claude mcp add --scope user --transport http vail https://agents.projectvail.com/mcp
+claude mcp login vail
 ```
 
-The shell expands `$VAIL_TOKEN` before Claude Code sees it, so the token is saved in plain text in your Claude Code configuration. The plugin avoids that.
-
-## Install in Codex
+## Install in Codex (and ChatGPT)
 
 ```sh
-export VAIL_TOKEN=vail_pat_...      # in the shell profile Codex starts from
 codex plugin marketplace add projectvail/vail-agent-assurance
 ```
 
-Restart Codex, run `/plugins`, and install `vail-agent-assurance`. The plugin connects with `bearer_token_env_var = "VAIL_TOKEN"`, so the token is read from Codex's environment each time it starts and is never written to Codex's configuration. Codex has no secure prompt like Claude Code's, so the token is only as protected as the place that sets the variable. A secret manager (`export VAIL_TOKEN="$(security find-generic-password -s vail -w)"` on macOS) is better than writing the token into a dotfile.
-
-Codex reads `.codex-plugin/plugin.json` ahead of `.claude-plugin/plugin.json`, so the two manifests can differ in how they authenticate.
+Restart Codex, run `/plugins`, install `vail-agent-assurance`, and authenticate `vail` via `/mcp` (or select **Authenticate** next to `vail` under **Settings → MCP servers** in the ChatGPT desktop app / IDE extension).
 
 ### Without the plugin
 
-Add the server to `~/.codex/config.toml`, and copy the skill directories to `~/.agents/skills/agent-assurance/` and `~/.agents/skills/agent-improvement/`:
-
-```toml
-[mcp_servers.vail]
-url = "https://agents.projectvail.com/mcp"
-bearer_token_env_var = "VAIL_TOKEN"
+```sh
+codex mcp add vail --url https://agents.projectvail.com/mcp
+codex mcp login vail
 ```
+
+Optionally copy `plugins/vail-agent-assurance/skills/agent-assurance/` and `plugins/vail-agent-assurance/skills/agent-improvement/` into `~/.agents/skills/`.
+
+## Install in OpenCode
+
+OpenCode uses OAuth by default for remote Streamable HTTP MCP servers:
+
+```sh
+opencode mcp add vail --url https://agents.projectvail.com/mcp
+opencode mcp auth vail
+```
+
+(Or run `/mcps` inside OpenCode, select `vail`, and complete sign-in in your browser.) Optionally copy `plugins/vail-agent-assurance/skills/agent-assurance/` and `plugins/vail-agent-assurance/skills/agent-improvement/` to `~/.config/opencode/skills/` or `.agents/skills/`.
+
+## Install in Cursor
+
+Add VAIL to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "vail": {
+      "url": "https://agents.projectvail.com/mcp"
+    }
+  }
+}
+```
+
+Open **Cursor Settings → MCP**, click **Connect** next to `vail`, and approve access in your browser. Optionally copy the two skill directories into `~/.cursor/skills/`.
 
 ## Install in Hermes
 
-The plugin directory is also a [Hermes Agent](https://hermes-agent.nousresearch.com) plugin (a portable Agent Plugins v1 package: `plugin.json`, `mcp.json`, and the skills). Install it and set your token:
+The plugin directory is a portable Agent Plugins v1 package (`plugin.json`, `mcp.json`, and `skills/`):
 
 ```sh
 hermes plugins install projectvail/vail-agent-assurance/plugins/vail-agent-assurance --enable
-hermes config set VAIL_TOKEN vail_pat_...
+hermes mcp login vail
 ```
 
-Once the plugin is in the Hermes plugin catalog, `hermes plugins install vail-agent-assurance` does the same. In Hermes Desktop you can enter the token in the plugin's settings form instead.
+Once the plugin is in the Hermes plugin catalog, `hermes plugins install vail-agent-assurance` does the same. In Hermes Desktop, you can also click **Authenticate** on the `vail` card under **Capabilities → Connectors**. *(On older Hermes releases prior to portable-plugin OAuth support, connect the server directly with `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth oauth` and run `hermes mcp login vail`.)*
 
-`hermes config set` saves the token in the profile's `.env` secrets file, not in `config.yaml`; the plugin's MCP entry holds only the reference `Authorization: Bearer ${VAIL_TOKEN}`. Typing the token on the command line leaves it in your shell history, so prefer the Desktop form or a secret manager (`hermes config set VAIL_TOKEN "$(security find-generic-password -s vail -w)"` on macOS).
+The tools appear as `mcp__vail__<tool>`, and the skills as `vail-agent-assurance:agent-assurance` and `vail-agent-assurance:agent-improvement`.
 
-The tools appear as `mcp__vail__<tool>`, and the skills as `vail-agent-assurance:agent-assurance` and `vail-agent-assurance:agent-improvement`. Start a new session after setting the token. If your `config.yaml` already has an MCP server named `vail` (from an earlier `hermes mcp add`), Hermes uses that entry instead of the plugin's; remove it with `hermes mcp remove vail`.
-
-What the plugin does on your machine: it connects to `https://agents.projectvail.com/mcp` with your token. When you ask it to scan an agent, Hermes uploads that agent's source files to VAIL. It runs no background process and stores nothing besides the token.
+What the plugin does on your machine: it connects to `https://agents.projectvail.com/mcp` using your OAuth credentials. When you ask it to scan an agent, Hermes uploads that agent's source files to VAIL. It runs no background process and stores nothing besides the OAuth token in Hermes's token store, unless you use the `agent-improvement` skill, which downloads and installs VAIL's grading package in a virtual environment of its own and writes local test results to `.vail/` in the agent's repository.
 
 ### The assurance panel for Hermes Desktop
 
-A second Hermes plugin, [`vail-assurance-panel`](plugins/vail-assurance-panel/), adds an **Assurance** page to Hermes Desktop: every Hermes profile (each bot) with its VAIL results, a one-click **Scan with VAIL** that shows exactly which files would be uploaded before sending them, and whether a profile changed since its last scan. It uses the same `VAIL_TOKEN`.
+A second Hermes plugin, [`vail-assurance-panel`](plugins/vail-assurance-panel/), adds an **Assurance** page to Hermes Desktop: every Hermes profile (each bot) with its VAIL results, a one-click **Scan with VAIL** that shows exactly which files would be uploaded before sending them, and whether a profile changed since its last scan. Because the panel's backend runs outside an interactive MCP session, configure it with a personal access token created under **Access tokens** at <https://agents.projectvail.com/settings/tokens>:
 
 ```sh
 hermes plugins install projectvail/vail-agent-assurance/plugins/vail-assurance-panel --enable
 ```
 
-Then switch on **VAIL Assurance Panel** under **Capabilities → Plugins** in Hermes Desktop. See its [README](plugins/vail-assurance-panel/README.md).
+Then enter your token in the plugin's settings form in Hermes Desktop (or store it in your profile's `.env`), and switch on **VAIL Assurance Panel** under **Capabilities → Plugins**. See its [README](plugins/vail-assurance-panel/README.md).
 
 [`examples/trust-safety-desk`](examples/trust-safety-desk/) is a team of four Hermes bots to try both plugins on.
 
@@ -96,7 +130,7 @@ Then switch on **VAIL Assurance Panel** under **Capabilities → Plugins** in He
 
 | Tool | What it does |
 |---|---|
-| `get_identity` | Who the token acts as, and what your organization may do. |
+| `get_identity` | Who the connection acts as, and what your organization may do. |
 | `list_agents`, `create_agent` | Find or create the agent to work on. |
 | `prepare_source_upload`, `complete_source_upload` | Upload an agent's source, as one `.tar.gz`/`.tgz`/`.tar` archive or a set of files. |
 | `scan_agent` | Generate the agent's context, then discover its behaviors. |
@@ -112,9 +146,10 @@ Connecting a live agent, and running, reviewing, approving, or scheduling probes
 ```text
 .claude-plugin/marketplace.json                  the marketplace (read by Claude Code and Codex)
 plugins/vail-agent-assurance/
-  .claude-plugin/plugin.json                     Claude Code manifest: token from userConfig
-  .codex-plugin/plugin.json                      Codex manifest: token from $VAIL_TOKEN
-  plugin.json, mcp.json                          Hermes manifest (Agent Plugins v1): token from VAIL_TOKEN in Hermes's .env
+  .claude-plugin/plugin.json                     Claude Code & Anthropic Directory manifest (OAuth 2.1)
+  .codex-plugin/plugin.json, .mcp.json           Codex compatibility manifest & MCP server entry
+  plugin.json, mcp.json                          Portable Agent Plugins v1 manifest (OpenAI & Hermes, OAuth 2.1)
+  assets/                                        Square light/dark plugin logos and composer icons
   skills/agent-assurance/SKILL.md                the workflow skill, shared by all harnesses
   skills/agent-improvement/                      testing and fixing an agent locally from its results
 plugins/vail-assurance-panel/                    Hermes Desktop page and its backend (a native Hermes plugin)
@@ -122,15 +157,16 @@ examples/trust-safety-desk/                      four Hermes bots that work as a
 tests/                                           tests for the panel's profile packaging (python -m pytest tests/)
 ```
 
-Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. Validate the Hermes package with `hermes plugins validate ./plugins/vail-agent-assurance`. For every release, bump `version` in **all three** manifests to the same value. CI checks this. Validate the panel with `hermes plugins validate ./plugins/vail-assurance-panel`.
+Validate changes with `claude plugin validate .` and `claude plugin validate ./plugins/vail-agent-assurance`. Validate the Hermes package with `hermes plugins validate ./plugins/vail-agent-assurance`. For every release, bump `version` in **all three** manifests (`.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`, and `plugin.json`) to the same value. CI checks this. Validate the panel with `hermes plugins validate ./plugins/vail-assurance-panel`.
 
-The plugin always connects to production. To try skill changes against a local VAIL server, don't install the plugin. Instead, connect the local server directly and copy the skill directory:
+The plugin always connects to production. To try skill changes against a local VAIL server (`http://127.0.0.1:8099/mcp`), connect the local server directly with OAuth instead of installing the plugin, and copy the skill directories:
 
 | Harness | Connect `http://127.0.0.1:8099/mcp` | Copy the skill to |
 |---|---|---|
-| Claude Code | `claude mcp add` (as in [Without the plugin](#without-the-plugin)) | `~/.claude/skills/<skill>/` |
-| Codex | a `[mcp_servers.vail]` entry in `~/.codex/config.toml` | `~/.agents/skills/<skill>/` |
-| Hermes | `hermes mcp add vail --url http://127.0.0.1:8099/mcp --auth header` | `~/.hermes/skills/<skill>/` |
+| Claude Code | `claude mcp add --transport http vail-local http://127.0.0.1:8099/mcp && claude mcp login vail-local` | `~/.claude/skills/<skill>/` |
+| Codex | `codex mcp add vail-local --url http://127.0.0.1:8099/mcp && codex mcp login vail-local` | `~/.agents/skills/<skill>/` |
+| OpenCode | `opencode mcp add vail-local --url http://127.0.0.1:8099/mcp && opencode mcp auth vail-local` | `~/.config/opencode/skills/<skill>/` |
+| Hermes | `hermes mcp add vail-local --url http://127.0.0.1:8099/mcp --auth oauth && hermes mcp login vail-local` | `~/.hermes/skills/<skill>/` |
 
 ```sh
 cp -R plugins/vail-agent-assurance/skills/agent-assurance plugins/vail-agent-assurance/skills/agent-improvement ~/.claude/skills/

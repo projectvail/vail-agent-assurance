@@ -1,25 +1,20 @@
 {
   "name": "vail-agent-assurance",
-  "version": "0.4.0",
+  "displayName": "VAIL Agent Assurance",
+  "version": "0.5.0",
   "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine",
-  "author": { "name": "Project VAIL", "url": "https://projectvail.com" },
+  "author": {
+    "name": "Project VAIL",
+    "email": "contact@projectvail.com",
+    "url": "https://projectvail.com"
+  },
   "homepage": "https://agents.projectvail.com",
   "repository": "https://github.com/projectvail/vail-agent-assurance",
-  "keywords": ["ai-agents", "assurance", "testing", "security", "mcp"],
-  "userConfig": {
-    "vail_token": {
-      "type": "string",
-      "title": "VAIL access token",
-      "description": "Your personal access token (vail_pat_...), created under Access tokens at agents.projectvail.com",
-      "sensitive": true,
-      "required": true
-    }
-  },
-  "mcpServers": {
-    "vail": {
-      "type": "http",
-      "url": "https://agents.projectvail.com/mcp",
-      "headers": { "Authorization": "Bearer ${user_config.vail_token}" }
-    }
-  }
+  "license": "LicenseRef-Proprietary",
+  "icon": "./assets/logo.svg",
+  "documentationUrl": "https://github.com/projectvail/vail-agent-assurance",
+  "supportUrl": "https://www.projectvail.com/platform/agent-assurance.html",
+  "privacyPolicyUrl": "https://agents.projectvail.com/privacy",
+  "termsOfServiceUrl": "https://agents.projectvail.com/terms",
+  "keywords": ["ai-agents", "assurance", "testing", "security", "mcp"]
 }

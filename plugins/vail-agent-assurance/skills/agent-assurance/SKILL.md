@@ -5,7 +5,7 @@ description: Use VAIL Agent Assurance Engine to scan an AI agent's source for un
 
 # VAIL Agent Assurance Engine
 
-The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test prompts that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP server's tools. Depending on the coding agent, they may appear with a prefix, such as `mcp__vail__get_identity` in Claude Code and Codex as well as in Hermes; this skill uses the bare names.
+The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test prompts that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP server's tools. Depending on the coding agent, they may appear with a prefix, such as `mcp__vail__get_identity` or `mcp__plugin_vail-agent-assurance_vail__get_identity`; this skill uses the bare names.
 
 ## What the results mean
 
@@ -17,15 +17,17 @@ These are **hypotheses generated from source**, not findings. A vulnerability be
 
 ## Before you start
 
-The user needs an existing VAIL organization (sign up at https://agents.projectvail.com) and a personal access token, created under **Access tokens** in the web app. The MCP connection authenticates against `https://agents.projectvail.com/mcp` with an `Authorization: Bearer` header holding that token; it is configured once, by the user, not by you.
+The user needs an existing VAIL organization (sign up at https://agents.projectvail.com). The MCP server at `https://agents.projectvail.com/mcp` authenticates with **OAuth 2.1** in the browser (and also accepts personal access tokens for headless environments).
 
-If the `vail` tools are missing or every call fails to authenticate, ask the user to create a token and configure it for their coding agent:
+If the `vail` tools are missing or calls fail to authenticate, ask the user to complete sign-in for their client:
 
-- **Claude Code** (plugin): run `/plugin` and configure vail-agent-assurance. Claude Code keeps the token in secure storage.
-- **Codex** (plugin or `config.toml`): Codex reads the token from the `VAIL_TOKEN` environment variable. Set it in the environment Codex starts from, then restart Codex.
-- **Hermes** (plugin): run `hermes config set VAIL_TOKEN <token>`, or enter it in the plugin's settings in Hermes Desktop, then start a new session. Hermes stores it in its own secrets file, outside the config you might share. Without the plugin, `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth header` asks for the token instead.
+- **Claude Code / claude.ai / Cowork**: run `/mcp` (or `claude mcp login vail` in a terminal) and complete the browser sign-in, or click **Connect** on the VAIL connector in Claude.
+- **Codex / ChatGPT**: run `/mcp` or `codex mcp login vail` (or click **Authenticate** in Settings → MCP servers) and allow access in the browser.
+- **OpenCode**: run `/mcps` and select `vail`, or run `opencode mcp auth vail` in a terminal.
+- **Cursor**: click **Connect** on the `vail` MCP server in Cursor's MCP settings to sign in via OAuth.
+- **Hermes**: run `hermes mcp login vail` (or click **Authenticate** on the `vail` card under Capabilities → Connectors in Hermes Desktop). On older Hermes builds without portable plugin OAuth, run `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth oauth` and sign in.
 
-Never ask them to paste a token into the conversation, never write one into a file yourself, and never put one on a command line you run.
+Never ask the user to paste a password or access token into the conversation, never write a token into a file yourself, and never put a token on a command line you run.
 
 Call `get_identity` first to confirm which organization you are acting in.
 
@@ -37,7 +39,7 @@ Call `get_identity` first to confirm which organization you are acting in.
 
 ## Uploading source
 
-VAIL cannot read files on this machine. You transfer them yourself with your shell tools, in three steps:
+VAIL cannot read files on this machine. In local coding agents with shell access, transfer them with your shell tools in three steps (in cloud-only chat surfaces without local files, you can still inspect existing agents, scan already-uploaded source, generate probes, and read results):
 
 1. **Choose the files.** Either one archive (`.tar.gz`, `.tgz`, or `.tar`) or a set of individual text files. Supply the agent's own source: prompts, tool definitions, agent code, and relevant docs. Leave out secrets (`.env`, keys), lockfiles, build output, and data dumps; VAIL skips many of these anyway. For more than a few hundred files, make an archive (`tar czf agent.tgz <dir>`).
 2. **Prepare the upload.** Call `prepare_source_upload` with the agent ID and, for each file, its relative path, size in bytes, and SHA-256 (`shasum -a 256 <file>`, or `sha256sum`). It returns an `upload_id` and, per file, a URL and form fields.
@@ -81,7 +83,7 @@ If a scan step fails, `get_operation_status` says which step and why. Calling `s
 
 `get_behaviors` and `get_probes` return complete JSON for the agent's current results, including `schema_version`, the agent, the source it was generated from, and the run that produced it. Probe exports include the option pools their placeholders draw from.
 
-Larger results come back as a short-lived `download_url` instead. Fetch it promptly (`curl -sS -o <file> "<download_url>"`) and check the returned SHA-256.
+Larger results come back as a short-lived `download.url` instead. Fetch it promptly (`curl -sS -o <file> "<download.url>"`) and check the returned SHA-256.
 
 Save results to files only when the user asks, and where they ask.
 
