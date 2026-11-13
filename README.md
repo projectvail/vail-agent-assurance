@@ -126,20 +126,38 @@ Then enter your token in the plugin's settings form in Hermes Desktop (or store 
 
 [`examples/trust-safety-desk`](examples/trust-safety-desk/) is a team of four Hermes bots to try both plugins on.
 
-## What it can do
+## What it can do (all 33 MCP tools)
+
+### Identity, agents, source, scanning, and probes (14 tools)
 
 | Tool | What it does |
 |---|---|
 | `get_identity` | Who the connection acts as, and what your organization may do. |
 | `list_agents`, `create_agent` | Find or create the agent to work on. |
+| `get_agent_status` | Report the agent's stage, collected source, result freshness, steering links, and `next_actions`. |
 | `prepare_source_upload`, `complete_source_upload` | Upload an agent's source, as one `.tar.gz`/`.tgz`/`.tar` archive or a set of files. |
-| `scan_agent` | Generate the agent's context, then discover its behaviors. |
-| `generate_probes`, `set_generation_limits` | Write probes for those behaviors. |
-| `get_agent_status`, `get_operation_status` | Follow progress, failures, and what to do next. |
-| `get_behaviors`, `get_probes` | Retrieve the complete current results as JSON. |
+| `scan_agent` | Generate the agent's context, then discover its vulnerability and control behaviors. |
+| `classify_behaviors` | Classify or re-classify vulnerability behaviors against Cisco, OWASP Agentic, OWASP LLM, MITRE ATLAS, and NIST AI 100-2 taxonomies. |
+| `generate_probes`, `set_generation_limits` | Write probes and option pools for discovered behaviors, and configure generation limits. |
+| `get_operation_status` | Poll progress, substeps, warnings, and outcomes for scans, classifications, and probe generation. |
+| `get_behaviors`, `get_probes` | Retrieve the complete current behavior (with classifications) and probe artifacts as JSON or verified downloads. |
 | `get_grading_package` | Download `vail-grading`, the package VAIL grades probe replies with, to test probes against an agent running locally (LangGraph, Hermes, or OpenClaw). |
 
-Connecting a live agent, and running, reviewing, approving, or scheduling probes on it, happen in the VAIL web app. Testing probes locally, with the `agent-improvement` skill, needs only your coding agent and a local copy of the agent.
+### Steering setup, endpoint connection, experiments, and Promote (19 tools)
+
+| Tool | What it does |
+|---|---|
+| `get_steering_setup`, `validate_steering_contract` | Fetch steering setup materials and statically validate a `vail-steering.json` contract for the agent's platform. |
+| `collect_github_source` | Collect a committed GitHub revision via your organization's VAIL GitHub App for Promote provenance. |
+| `get_agent_connection`, `prepare_agent_connection` | Inspect an agent's connection state or prepare a ticketed direct endpoint verification without passing secrets in MCP arguments. |
+| `list_experiments`, `create_experiment`, `get_experiment` | List experiments, create a draft from generated probes with a proposal budget, and inspect draft cases and progress. |
+| `save_experiment_case`, `remove_experiment_case` | Review, edit, or remove draft experiment cases with completion checks and action authorization. |
+| `set_experiment_profiles` | Configure manual candidate profiles and comparison repetition counts. |
+| `run_experiment`, `get_experiment_job`, `pause_experiment` | Run baseline/steering/comparison jobs on VAIL workers, poll job progress, and pause safely. |
+| `get_experiment_report`, `get_experiment_execution` | Read experiment scores, fresh-baseline comparisons, winners, and per-execution traces and profile receipts. |
+| `get_promotion`, `preview_promotion`, `publish_promotion` | Check eligibility, preview the immutable GitHub diff and `plan_id`, and open a draft GitHub PR (never merges or deploys). |
+
+Approving catalog probes for recurring scheduled monitoring and managing schedules happen in the VAIL web app, as do initial organization signup and GitHub App installation. Testing and fixing source code locally uses the `agent-improvement` skill; comparing runtime/request settings and opening a draft PR uses the [steering workflow](plugins/vail-agent-assurance/skills/agent-assurance/references/steering.md).
 
 ## Repository layout
 
@@ -151,6 +169,7 @@ plugins/vail-agent-assurance/
   plugin.json, mcp.json                          Portable Agent Plugins v1 manifest (OpenAI & Hermes, OAuth 2.1)
   assets/                                        Square light/dark plugin logos and composer icons
   skills/agent-assurance/SKILL.md                the workflow skill, shared by all harnesses
+  skills/agent-assurance/references/steering.md  steering experiments and draft PR promotion guide
   skills/agent-improvement/                      testing and fixing an agent locally from its results
 plugins/vail-assurance-panel/                    Hermes Desktop page and its backend (a native Hermes plugin)
 examples/trust-safety-desk/                      four Hermes bots that work as a team, with stub tools

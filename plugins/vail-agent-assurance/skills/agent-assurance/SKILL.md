@@ -1,19 +1,19 @@
 ---
 name: agent-assurance
-description: Use VAIL Agent Assurance Engine to scan an AI agent's source for unintended behaviors and generate test probes. Use when the user asks to scan, assess, or generate probes or test cases for an agent with VAIL or the Assurance Engine, to upload or replace an agent's source in VAIL, or to check on or retrieve VAIL behaviors and probes.
+description: Scan agent source, classify behavior risks, and generate probes with VAIL, or set up steering contracts, run reviewed baseline and optimization experiments, and promote winning profiles as draft PRs. Use for VAIL onboarding, assurance scans and probes, behavior classification, steering experiments, and promotion. For local source fixes with VAIL's grading package, use agent-improvement.
 ---
 
 # VAIL Agent Assurance Engine
 
-The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It then writes probes: test prompts that check those behaviors against the running agent. This skill drives that workflow through the `vail` MCP server's tools. Depending on the coding agent, they may appear with a prefix, such as `mcp__vail__get_identity` or `mcp__plugin_vail-agent-assurance_vail__get_identity`; this skill uses the bare names.
+The Assurance Engine reads an AI agent's source (its prompts, tool definitions, and code) and works out how the agent could misbehave and what it must keep doing correctly. It classifies discovered risks against industry security taxonomies and writes probes: test prompts with deterministic checks that evaluate those behaviors against the running agent. This skill drives that workflow—plus optional steering experiments and draft PR promotion—through the `vail` MCP server's tools. Depending on the coding agent, tools may appear with a prefix such as `mcp__vail__get_identity` or `mcp__plugin_vail-agent-assurance_vail__get_identity`; this skill uses the bare names.
 
 ## What the results mean
 
-- **Vulnerability behaviors**: ways the agent could be led to do something harmful or unintended, such as acting on the wrong customer, calling a tool with the wrong argument, exceeding a limit, or leaking data. Each one cites the evidence in the source that suggests it.
+- **Vulnerability behaviors**: ways the agent could be led to do something harmful or unintended, such as acting on the wrong customer, calling a tool with the wrong argument, exceeding a limit, or leaking data. Each cites the evidence in the source that suggests it, plus security framework classifications (Cisco AI Security & Safety, OWASP Agentic Top 10, OWASP LLM Top 10, MITRE ATLAS, NIST AI 100-2) and `model_based` attribution when available.
 - **Control behaviors**: things the agent must keep doing correctly, such as confirming before a refund or refusing out-of-scope requests.
-- **Probes**: test cases for those behaviors. A probe has a message (often with placeholders filled from shared *option pools*), and the metrics that judge the agent's reply.
+- **Probes**: test cases for those behaviors. A probe has a message (often with placeholders filled from shared *option pools*) and the metrics that judge the agent's reply.
 
-These are **hypotheses generated from source**, not findings. A vulnerability behavior means the source suggests a risk worth testing, not that the agent is vulnerable. Only running the probes against the agent establishes how it behaves: live, in the VAIL web app, or locally, through the `agent-improvement` skill. Say this when presenting results.
+These are **hypotheses generated from source**, not findings. A vulnerability behavior means the source suggests a risk worth testing, not that the agent is vulnerable. Only running the probes against the agent establishes how it behaves: in the VAIL web app, through MCP steering experiments ([references/steering.md](references/steering.md)), or locally through the `agent-improvement` skill. Say this when presenting results.
 
 ## Before you start
 
@@ -37,9 +37,11 @@ Call `get_identity` first to confirm which organization you are acting in.
 - If the user names an agent, match it against the list and confirm when more than one could match.
 - `create_agent` creates a new one. It needs a name and a platform (`langgraph`, `hermes`, `openclaw`, `pi`, `agentforce`, `servicenow`, or `http`). Pass a `request_key`: a random string you generate once for this agent. If the call times out or the connection drops, retry with the **same** `request_key`, so the retry returns the agent the first call created instead of making a second one.
 
-## Uploading source
+## Uploading or collecting source
 
-VAIL cannot read files on this machine. In local coding agents with shell access, transfer them with your shell tools in three steps (in cloud-only chat surfaces without local files, you can still inspect existing agents, scan already-uploaded source, generate probes, and read results):
+VAIL cannot read files on this machine directly. You can either upload local files (`prepare_source_upload` + `complete_source_upload`) or, when the organization has authorized VAIL's GitHub App (and you want GitHub provenance for later Promote), collect a committed repository revision with `collect_github_source`.
+
+To upload local files in three steps:
 
 1. **Choose the files.** Either one archive (`.tar.gz`, `.tgz`, or `.tar`) or a set of individual text files. Supply the agent's own source: prompts, tool definitions, agent code, and relevant docs. Leave out secrets (`.env`, keys), lockfiles, build output, and data dumps; VAIL skips many of these anyway. For more than a few hundred files, make an archive (`tar czf agent.tgz <dir>`).
 2. **Prepare the upload.** Call `prepare_source_upload` with the agent ID and, for each file, its relative path, size in bytes, and SHA-256 (`shasum -a 256 <file>`, or `sha256sum`). It returns an `upload_id` and, per file, a URL and form fields.
@@ -49,22 +51,26 @@ VAIL cannot read files on this machine. In local coding agents with shell access
    ```
    A 2xx response means that file arrived. Then call `complete_source_upload` with the `upload_id`, plus optional `include`/`exclude` glob lists to narrow what is collected.
 
-`complete_source_upload` validates the files and replaces the agent's source. The upload succeeding is not the same as the source being collected: read the response, which reports accepted files, skipped files with reasons, and whether a limit truncated the collection. Tell the user about skipped files that look important.
+`complete_source_upload` validates the files and replaces the agent's source. Read the response, which reports accepted files, skipped files with reasons, and whether a limit truncated the collection. Tell the user about skipped files that look important.
 
 A replacement is the **whole** new source: files you leave out are not kept from before. Generated results from the earlier source are kept but marked **outdated**, and the agent goes back to needing a scan.
 
-Upload sessions expire after an hour. If `complete_source_upload` reports the agent is busy (`operation_in_progress`), a scan or probe generation is running; wait for it, then call `complete_source_upload` again with the same `upload_id`.
+Upload sessions expire after an hour. If `complete_source_upload` reports `operation_in_progress`, wait for the running operation and call `complete_source_upload` again with the same `upload_id`.
 
-## Scanning and generating probes
+## Scanning, classifying, and generating probes
 
-1. `scan_agent` starts the scan, which has two internal steps: **context generation** (reading the source into a structured description of the agent) and **behavior discovery**. It returns an `operation_id` straight away; the work continues on VAIL's servers even if this session ends.
-2. Poll `get_operation_status` with that ID. Scans usually take several minutes; wait between polls (30–60 seconds is plenty) instead of polling in a tight loop. The status shows each step and recent progress messages.
-3. When the scan has succeeded, retrieve the behaviors with `get_behaviors`.
-4. `generate_probes` writes probes for those behaviors. It is a separate, explicit step: only run it when the user wants probes. Poll it the same way, then call `get_probes`.
+1. `scan_agent` starts the scan, which generates context and discovers vulnerability and control behaviors (automatically classifying vulnerability behaviors against security taxonomies when configured). It returns an `operation_id` straight away; the work continues on VAIL's servers even if this session ends.
+2. Poll `get_operation_status` with that ID every 30–60 seconds rather than in a tight loop.
+3. When the scan has succeeded, retrieve the behaviors with `get_behaviors`. To refresh taxonomy classifications later without rescanning, call `classify_behaviors` and poll `get_operation_status`.
+4. `generate_probes` writes probes for those behaviors. It is a separate, explicit step: only run it when the user wants probes. Poll `get_operation_status` the same way, then call `get_probes`.
 
 `set_generation_limits` changes how many vulnerability and control probes the next generation writes. Its bounds are reported by `get_agent_status`.
 
-`get_agent_status` is the overall view: the agent's stage, its current source, whether its results are current or outdated, any running operation, recent operations, and `next_actions` listing what can be done now. Prefer it to guessing.
+`get_agent_status` is the overall view: the agent's stage, its current source, whether its results are current or outdated, any running operation, recent operations, steering links, and `next_actions` listing what can be done now. Prefer it to guessing.
+
+## Steering experiments and Promote
+
+When the user wants to set up steering contracts (`get_steering_setup`, `validate_steering_contract`), connect a test endpoint (`get_agent_connection`, `prepare_agent_connection`), run reviewed baseline/optimization experiments (`list_experiments`, `create_experiment`, `get_experiment`, `save_experiment_case`, `remove_experiment_case`, `set_experiment_profiles`, `run_experiment`, `get_experiment_job`, `pause_experiment`, `get_experiment_report`, `get_experiment_execution`), or publish a winning profile as a draft GitHub PR (`get_promotion`, `preview_promotion`, `publish_promotion`), read and follow [references/steering.md](references/steering.md).
 
 ## When something fails
 
@@ -87,8 +93,8 @@ Larger results come back as a short-lived `download.url` instead. Fetch it promp
 
 Save results to files only when the user asks, and where they ask.
 
-## What this does not do
+## Boundaries and next steps
 
-These tools do not connect to the live agent, run or review probes, approve or reject them, or schedule them. Those happen in the VAIL web app at https://agents.projectvail.com; point the user there for them.
+Approving catalog probes for recurring scheduled monitoring and managing schedules happen in the VAIL web app at https://agents.projectvail.com, as do initial account signup and GitHub App installation. VAIL never merges promotion PRs or deploys changes to user infrastructure.
 
-To test and fix the agent locally from these results, use the `agent-improvement` skill. Once probes are retrieved, offer it to the user.
+For local source fixes based on VAIL results, use the [agent-improvement skill](../agent-improvement/SKILL.md) (which downloads `vail-grading` via `get_grading_package` and grades local runs). For comparing runtime/request settings and opening a draft PR with a winning profile, use [references/steering.md](references/steering.md). If the user only requested a scan or probes, present the results and offer the relevant next step without starting it unasked.
