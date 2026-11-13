@@ -1,0 +1,8 @@
+{
+  "name": "vail-assurance-panel",
+  "label": "Agent assurance",
+  "description": "VAIL Agent Assurance results for your Hermes profiles",
+  "version": "0.2.0",
+  "api": "plugin_api.py",
+  "tab": { "hidden": true }
+}

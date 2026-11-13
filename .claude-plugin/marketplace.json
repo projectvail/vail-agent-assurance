@@ -6,7 +6,8 @@
     {
       "name": "vail-agent-assurance",
       "source": "./plugins/vail-agent-assurance",
-      "description": "Scan agents, test behavior risks, run steering experiments, and promote winning profiles as draft PRs with VAIL"
+      "homepage": "https://agents.projectvail.com",
+      "description": "Scan AI agents, generate probes, and run steering experiments with the VAIL Agent Assurance Engine."
     }
   ]
 }

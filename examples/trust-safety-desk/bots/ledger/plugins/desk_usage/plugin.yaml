@@ -1,0 +1,8 @@
+name: desk_usage
+version: 0.1.0
+description: "Ledger's read-only view of VAIL Assurance Engine usage per organization and user. Stubbed: answers from desk_data.json."
+author: VAIL
+kind: standalone
+provides_tools:
+  - get_usage
+  - get_org
