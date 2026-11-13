@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "vail-agent-assurance",
-  "version": "0.5.0",
-  "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine",
+  "version": "0.6.0",
+  "description": "Scan AI agents, generate probes, and run steering experiments with the VAIL Agent Assurance Engine.",
   "author": {
     "name": "Project VAIL",
     "email": "contact@projectvail.com",
@@ -23,14 +23,15 @@
       "onboardingSkill": "./skills/agent-assurance/SKILL.md",
       "interface": {
         "displayName": "VAIL Agent Assurance",
-        "shortDescription": "Scan AI agents for risk probes",
-        "longDescription": "Analyze an AI agent's source (prompts, skill files, tool schemas, and code) with the VAIL Agent Assurance Engine to uncover vulnerability and control behaviors, generate deterministic test probes, and test and harden the agent locally before release.",
+        "shortDescription": "Scan and steer AI agents with VAIL",
+        "longDescription": "Analyze an AI agent's source (prompts, skill files, tool schemas, and code) with the VAIL Agent Assurance Engine to uncover vulnerability and control behaviors, generate deterministic test probes, test and harden the agent locally, or run steering experiments to compare request settings and promote an eligible profile as a draft PR.",
         "developerName": "Project VAIL",
         "category": "Developer Tools",
         "capabilities": [
           "Scan agent source for behavioral risks",
           "Generate deterministic test probes",
-          "Grade and harden agents locally"
+          "Grade and harden agents locally",
+          "Run steering experiments and promote tested profiles"
         ],
         "websiteURL": "https://agents.projectvail.com",
         "supportURL": "https://www.projectvail.com/platform/agent-assurance.html",
@@ -101,7 +102,7 @@
         "commerce_description": "This plugin does not sell products or process payments."
       },
       "publication": {
-        "release_notes": "Switch MCP authentication to OAuth 2.1, add multi-platform onboarding documentation, and include directory listing icons and review metadata."
+        "release_notes": "Add steering setup, reviewed experiments, and draft PR publication for eligible profiles."
       }
     },
     "com.nousresearch.hermes": {

@@ -1,8 +1,8 @@
 {
   "name": "vail-agent-assurance",
   "displayName": "VAIL Agent Assurance",
-  "version": "0.5.0",
-  "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine",
+  "version": "0.6.0",
+  "description": "Scan AI agents, generate probes, and run steering experiments with the VAIL Agent Assurance Engine.",
   "author": {
     "name": "Project VAIL",
     "email": "contact@projectvail.com",
