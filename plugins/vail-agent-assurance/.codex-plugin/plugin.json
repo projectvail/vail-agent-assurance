@@ -1,24 +1,103 @@
 {
   "name": "vail-agent-assurance",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine",
-  "author": { "name": "Project VAIL", "url": "https://projectvail.com" },
+  "author": {
+    "name": "Project VAIL",
+    "email": "contact@projectvail.com",
+    "url": "https://projectvail.com"
+  },
   "homepage": "https://agents.projectvail.com",
   "repository": "https://github.com/projectvail/vail-agent-assurance",
+  "license": "LicenseRef-Proprietary",
   "keywords": ["ai-agents", "assurance", "testing", "security", "mcp"],
   "skills": "./skills/",
-  "mcpServers": {
-    "vail": {
-      "type": "http",
-      "url": "https://agents.projectvail.com/mcp",
-      "bearer_token_env_var": "VAIL_TOKEN"
-    }
-  },
+  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "VAIL Agent Assurance",
-    "shortDescription": "Scan AI agents for risky behaviors and generate test probes",
+    "shortDescription": "Scan AI agents for risk probes",
+    "longDescription": "Analyze an AI agent's source (prompts, skill files, tool schemas, and code) with the VAIL Agent Assurance Engine to uncover vulnerability and control behaviors, generate deterministic test probes, and test and harden the agent locally before release.",
     "developerName": "Project VAIL",
     "category": "Developer Tools",
-    "websiteURL": "https://agents.projectvail.com"
+    "capabilities": [
+      "Scan agent source for behavioral risks",
+      "Generate deterministic test probes",
+      "Grade and harden agents locally"
+    ],
+    "websiteURL": "https://agents.projectvail.com",
+    "supportURL": "https://www.projectvail.com/platform/agent-assurance.html",
+    "privacyPolicyURL": "https://agents.projectvail.com/privacy",
+    "termsOfServiceURL": "https://agents.projectvail.com/terms",
+    "defaultPrompt": [
+      "Which VAIL organization am I connected to, and what agents exist?",
+      "Scan the AI agent in this repository with VAIL and summarize its behavior risks.",
+      "Retrieve VAIL's generated probes for my agent and help me test them locally."
+    ],
+    "brandColor": "#0F172A",
+    "brandColorDark": "#94A3B8",
+    "composerIcon": "./assets/icon.svg",
+    "composerIconDark": "./assets/icon-dark.svg",
+    "logo": "./assets/logo.svg",
+    "logoDark": "./assets/logo-dark.svg"
+  },
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/agent-assurance/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Verify authenticated VAIL identity and organization capabilities",
+              "prompt": "Check which VAIL organization I am signed in to and whether scans are enabled.",
+              "tools_triggered": "get_identity",
+              "expected_behavior": "Calls get_identity and reports the signed-in user email, organization name, approval status, and supported agent platforms."
+            },
+            {
+              "description": "List agents in the connected VAIL organization",
+              "prompt": "List all agents in my VAIL organization with their current stages.",
+              "tools_triggered": "list_agents",
+              "expected_behavior": "Calls list_agents and summarizes each agent's ID, name, platform, and pipeline stage."
+            },
+            {
+              "description": "Inspect one agent's scan status and next actions",
+              "prompt": "Show the detailed VAIL status and available next actions for the sample support agent in my organization.",
+              "tools_triggered": "list_agents, get_agent_status",
+              "expected_behavior": "Finds the agent's stable agent_id and calls get_agent_status to report collected source files, result freshness, and allowed next_actions."
+            },
+            {
+              "description": "Retrieve discovered vulnerability and control behaviors",
+              "prompt": "Fetch the current VAIL vulnerability and control behaviors for the sample support agent and summarize the top risks.",
+              "tools_triggered": "list_agents, get_behaviors",
+              "expected_behavior": "Calls get_behaviors for the agent_id, summarizes the discovered vulnerability and control behaviors with their source evidence, and notes that they are source-derived hypotheses."
+            },
+            {
+              "description": "Retrieve generated probes and option pools",
+              "prompt": "Get VAIL's generated test probes for the sample support agent.",
+              "tools_triggered": "list_agents, get_probes",
+              "expected_behavior": "Calls get_probes for the agent_id and presents the vulnerability probes, control probes, and shared option pools."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Unsupported agent deletion over MCP",
+              "prompt": "Delete all agents in my VAIL organization right now."
+            },
+            {
+              "description": "Unsupported live probe scheduling over MCP",
+              "prompt": "Connect my production agent endpoint and schedule hourly live probes through VAIL MCP."
+            },
+            {
+              "description": "Access to another organization's agents",
+              "prompt": "Show me the behaviors and probes for agent agt_00000000 in another company's VAIL organization."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "This plugin does not sell products or process payments."
+      },
+      "publication": {
+        "release_notes": "Switch MCP authentication to OAuth 2.1, add multi-platform onboarding documentation, and include directory listing icons and review metadata."
+      }
+    }
   }
 }

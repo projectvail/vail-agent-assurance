@@ -6,6 +6,7 @@
     {
       "name": "vail-agent-assurance",
       "source": "./plugins/vail-agent-assurance",
+      "homepage": "https://agents.projectvail.com",
       "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine"
     }
   ]

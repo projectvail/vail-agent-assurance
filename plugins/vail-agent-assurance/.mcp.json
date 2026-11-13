@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "vail": {
+      "type": "http",
+      "url": "https://agents.projectvail.com/mcp"
+    }
+  }
+}
