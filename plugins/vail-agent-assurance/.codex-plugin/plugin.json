@@ -1,6 +1,6 @@
 {
   "name": "vail-agent-assurance",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Scan AI agents' source for risky behaviors and generate test probes with the VAIL Agent Assurance Engine",
   "author": {
     "name": "Project VAIL",
@@ -35,10 +35,10 @@
     ],
     "brandColor": "#0F172A",
     "brandColorDark": "#94A3B8",
-    "composerIcon": "./assets/icon.svg",
-    "composerIconDark": "./assets/icon-dark.svg",
-    "logo": "./assets/logo.svg",
-    "logoDark": "./assets/logo-dark.svg"
+    "composerIcon": "./assets/icon.png",
+    "composerIconDark": "./assets/icon-dark.png",
+    "logo": "./assets/logo.png",
+    "logoDark": "./assets/logo-dark.png"
   },
   "extensions": {
     "com.openai": {
@@ -96,7 +96,7 @@
         "commerce_description": "This plugin does not sell products or process payments."
       },
       "publication": {
-        "release_notes": "Switch MCP authentication to OAuth 2.1, add multi-platform onboarding documentation, and include directory listing icons and review metadata."
+        "release_notes": "Document all 33 MCP tools (including behavior classification, steering experiments, and draft PR promotion) and add the steering reference guide."
       }
     }
   }

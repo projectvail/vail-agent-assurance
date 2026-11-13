@@ -1,6 +1,6 @@
 ---
 name: agent-improvement
-description: Use VAIL Agent Assurance Engine results to fix and harden an AI agent locally. Use when the user asks to fix, improve, harden, or address an agent's VAIL or Assurance Engine results, behavior risks, or vulnerabilities, to test VAIL probes against a locally running agent, or to continue an earlier session of doing so.
+description: Use VAIL Agent Assurance Engine results to fix and harden an AI agent locally. Use when the user asks to fix, improve, harden, or address an agent's VAIL or Assurance Engine results, behavior risks, or vulnerabilities, to test VAIL probes against a locally running agent, or to continue an earlier session of doing so. For steering experiments and Promote, use agent-assurance.
 ---
 
 # Improving an agent from its VAIL results
@@ -12,6 +12,8 @@ The user decides what is worth addressing and approves every change. You propose
 Call them **behavior risks** in everything you show the user. AE's data calls them vulnerability behaviors: they are the `vulnerabilities` artifact from `get_behaviors`. Use AE's names only when referring to data fields.
 
 This skill uses the `vail` MCP server's tools and the `agent-assurance` skill's setup. If the `vail` tools are missing or fail to authenticate, follow that skill's **Before you start**.
+
+For a steering experiment or Promote, use [agent-assurance's steering workflow](../agent-assurance/references/steering.md). That workflow compares request settings and produces a tested profile; this skill tests behavior risks locally and helps the user change source code.
 
 ## Before you start
 
