@@ -35,10 +35,10 @@
     ],
     "brandColor": "#0F172A",
     "brandColorDark": "#94A3B8",
-    "composerIcon": "./assets/icon.svg",
-    "composerIconDark": "./assets/icon-dark.svg",
-    "logo": "./assets/logo.svg",
-    "logoDark": "./assets/logo-dark.svg"
+    "composerIcon": "./assets/icon.png",
+    "composerIconDark": "./assets/icon-dark.png",
+    "logo": "./assets/logo.png",
+    "logoDark": "./assets/logo-dark.png"
   },
   "extensions": {
     "com.openai": {
