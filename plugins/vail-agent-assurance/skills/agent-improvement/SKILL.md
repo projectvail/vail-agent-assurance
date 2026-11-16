@@ -13,7 +13,7 @@ Call them **behavior risks** in everything you show the user. AE's data calls th
 
 This skill uses the `vail` MCP server's tools and the `agent-assurance` skill's setup. If the `vail` tools are missing or fail to authenticate, follow that skill's **Before you start**.
 
-For a steering experiment or Promote, use [agent-assurance's steering workflow](../agent-assurance/references/steering.md). That workflow compares request settings and produces a tested profile; this skill tests behavior risks locally and helps the user change source code.
+For a steering experiment or Promote, use the `agent-assurance` skill's steering workflow. That workflow compares request settings and produces a tested profile; this skill tests behavior risks locally and helps the user change source code.
 
 ## Before you start
 
