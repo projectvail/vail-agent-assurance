@@ -24,6 +24,7 @@ There is no local MCP server or VAIL CLI to install, and you don't need AWS cred
 | **ChatGPT** (Web & Work) | Yes (OpenAI Plugins Directory) | `https://agents.projectvail.com/mcp` | OAuth 2.1 in browser |
 | **OpenCode** | Copy `skills/` (optional) | `opencode mcp add vail --url https://agents.projectvail.com/mcp` | OAuth 2.1 in browser (default; `/mcps` or `opencode mcp auth vail`) |
 | **Cursor** | Copy `skills/` to `~/.cursor/skills/` (optional) | `~/.cursor/mcp.json` (`"url": "https://agents.projectvail.com/mcp"`) | OAuth 2.1 in browser (Connect in Cursor MCP settings) |
+| **Amp** (CLI, IDE, Orbs) | `amp skill add` or copy `skills/` (optional) | `amp mcp add vail https://agents.projectvail.com/mcp` (or `amp mcp remote`) | OAuth 2.1 in browser (automatic on launch, or `amp mcp remote --personal login vail`) |
 | **Hermes Agent & Hermes Desktop** | Yes (`vail-agent-assurance` + `vail-assurance-panel`) | `https://agents.projectvail.com/mcp` | OAuth 2.1 (`hermes mcp login vail`); PAT for the Desktop fleet panel |
 
 ### Target AI agent frameworks (what VAIL scans and grades)
@@ -98,6 +99,63 @@ Add VAIL to `~/.cursor/mcp.json`:
 ```
 
 Open **Cursor Settings → MCP**, click **Connect** next to `vail`, and approve access in your browser. Optionally copy the two skill directories into `~/.cursor/skills/`.
+
+## Install in Amp
+
+### 1. Connect the VAIL MCP server
+
+**Local CLI / IDE setup (recommended on your machine):**
+
+```sh
+amp mcp add vail https://agents.projectvail.com/mcp
+```
+
+This adds `vail` under `amp.mcpServers` in `~/.config/amp/settings.json` (or pass `--workspace` to write to `.amp/settings.json` and run `amp mcp approve vail`). Alternatively, add it to `~/.config/amp/settings.json` directly:
+
+```json
+{
+  "amp.mcpServers": {
+    "vail": {
+      "url": "https://agents.projectvail.com/mcp"
+    }
+  }
+}
+```
+
+When you start `amp`, Amp automatically opens your browser to complete the OAuth 2.1 sign-in flow and stores the token in its secret store. To clear or refresh local OAuth credentials later, run `amp mcp oauth logout vail`.
+
+**Remote MCP definition (for Amp Orbs, web/apps, or sharing across machines):**
+
+Orbs do not read local `~/.config/amp/settings.json` and cannot run browser-based local OAuth flows. Store VAIL as a remote MCP definition on ampcode.com instead (use `--workspace <workspace>` or `--project <project>` in place of `--personal` to share it):
+
+```sh
+amp mcp remote --personal add vail https://agents.projectvail.com/mcp --auth oauth
+amp mcp remote --personal login vail
+```
+
+Open the printed ampcode.com OAuth URL in your browser to authorize access (you can also configure this under **Integrations & MCP settings** on ampcode.com).
+
+### 2. Install the skills
+
+Install `agent-assurance` and `agent-improvement` machine-wide into `~/.config/agents/skills/`:
+
+```sh
+amp skill add https://github.com/projectvail/vail-agent-assurance/tree/main/plugins/vail-agent-assurance/skills --global
+```
+
+Omit `--global` to install them as project skills in `.agents/skills/` (which can be committed to a repository so teammates and Orbs pick them up automatically). You can also copy `plugins/vail-agent-assurance/skills/agent-assurance/` and `plugins/vail-agent-assurance/skills/agent-improvement/` directly into `~/.config/agents/skills/` or `.agents/skills/`, or ask Amp in a CLI thread to import them into your personal or workspace skills repository so they follow you across machines and Orbs.
+
+*(Tip: if you prefer to load VAIL's MCP tools only when a skill is invoked rather than in every thread, place a sibling `mcp.json` containing `{ "vail": { "url": "https://agents.projectvail.com/mcp" } }` inside each installed skill directory instead of adding `vail` to `amp.mcpServers`.)*
+
+### 3. Verify and use
+
+Confirm Amp discovered both skills:
+
+```sh
+amp skills list
+```
+
+Start a new `amp` session (or ask Amp to reload skills in an existing thread) and prompt it naturally—for example, *"Scan the agent in ./support-bot with VAIL and show me the behaviors it finds."* or *"Fix the behavior risks VAIL found in ./support-bot."* Amp automatically loads `agent-assurance` or `agent-improvement` when relevant, or you can name the skill explicitly.
 
 ## Install in Hermes
 
@@ -185,6 +243,7 @@ The plugin always connects to production. To try skill changes against a local V
 | Claude Code | `claude mcp add --transport http vail-local http://127.0.0.1:8099/mcp && claude mcp login vail-local` | `~/.claude/skills/<skill>/` |
 | Codex | `codex mcp add vail-local --url http://127.0.0.1:8099/mcp && codex mcp login vail-local` | `~/.agents/skills/<skill>/` |
 | OpenCode | `opencode mcp add vail-local --url http://127.0.0.1:8099/mcp && opencode mcp auth vail-local` | `~/.config/opencode/skills/<skill>/` |
+| Amp | `amp mcp add vail-local http://127.0.0.1:8099/mcp` | `~/.config/agents/skills/<skill>/` |
 | Hermes | `hermes mcp add vail-local --url http://127.0.0.1:8099/mcp --auth oauth && hermes mcp login vail-local` | `~/.hermes/skills/<skill>/` |
 
 ```sh
