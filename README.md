@@ -1,14 +1,14 @@
 # VAIL Agent Assurance for coding agents
 
-Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent: upload an AI agent's source, scan it for vulnerability and control behaviors, generate probes that test them, retrieve the results, and test and harden the agent locally—without leaving your editor.
+Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent: upload or collect an AI agent's source, scan it for vulnerability and control behaviors, classify risks against five security taxonomies and `model_based` attribution, generate deterministic probes, score every vulnerability on **Impact**, **Trigger**, and **Fidelity risks**, run steering experiments with draft PR promotion, or test and harden the agent locally—without leaving your editor.
 
 This repository packages `vail-agent-assurance` as a plugin marketplace for **Claude** and **Codex**, and as a portable [Agent Plugins v1](https://agent-plugins.org) package for **Hermes Agent**. The hosted MCP server at `https://agents.projectvail.com/mcp` authenticates with **OAuth 2.1** (and also accepts personal access tokens for headless or CI scripts), so it works out of the box across every major coding harness.
 
 It bundles:
 
 - a connection to VAIL's hosted MCP server at `https://agents.projectvail.com/mcp` (OAuth 2.1),
-- the `agent-assurance` skill, which guides your coding agent through uploading, scanning, generating probes, and retrieving results, and
-- the `agent-improvement` skill, which works through an agent's behavior risks with you: testing them against a local copy of the agent, graded the exact way VAIL grades them, and fixing what the tests show.
+- the `agent-assurance` skill, which guides your coding agent through source collection, scanning, security framework classification, probe generation, Impact/Trigger/Fidelity risk scoring, steering experiments, and draft PR promotion, and
+- the `agent-improvement` skill, which works through an agent's behavior risks with you: testing them against a local copy of the agent, graded the exact way VAIL grades them (including nested consistency checks for contradictory rules), and fixing what the tests show.
 
 There is no local MCP server or VAIL CLI to install, and you don't need AWS credentials. Your coding agent uploads files with its ordinary shell tools. Only the `agent-improvement` skill installs anything: VAIL's Python grading wheel (`vail-grading`), into a virtual environment of its own. [What the plugin sends and downloads](plugins/vail-agent-assurance/README.md#what-the-plugin-sends-and-downloads) lists it all.
 
@@ -28,12 +28,13 @@ There is no local MCP server or VAIL CLI to install, and you don't need AWS cred
 
 ### Target AI agent frameworks (what VAIL scans and grades)
 
-- **Source scanning & probe generation (all 7 platforms):** `langgraph` (LangGraph), `hermes` (Hermes Agent), `openclaw` (OpenClaw), `pi` (Pi), `agentforce` (Salesforce Agentforce), `servicenow` (ServiceNow), and `http` (any custom HTTP agent).
-- **Local probe execution & deterministic grading (`vail-grading` / `agent-improvement` skill):** **LangGraph**, **Hermes**, and **OpenClaw** (matching the platforms VAIL can also connect to and probe live on a schedule in the web app).
+- **Source scanning, classification, probe generation, and scoring (all 7 platforms):** `langgraph` (LangGraph), `hermes` (Hermes Agent), `openclaw` (OpenClaw), `pi` (Pi), `agentforce` (Salesforce Agentforce), `servicenow` (ServiceNow), and `http` (any custom HTTP agent).
+- **Live probing & steering experiments:** **LangGraph**, **Hermes**, **OpenClaw**, and **custom HTTP** (`http`). For LangGraph, Hermes, and OpenClaw agents inside a private network that cannot be exposed to the internet, use the signed outbound-only VAIL agent connector container ([setup guide](https://agents.projectvail.com/docs/guides/connector.md)).
+- **Local probe execution & deterministic grading (`vail-grading` / `agent-improvement` skill):** **LangGraph**, **Hermes**, and **OpenClaw**.
 
 ## Before you start
 
-You need a VAIL organization. Sign up at <https://agents.projectvail.com>. When you connect from any coding agent below, your browser opens VAIL to confirm which account and organization to authorize. You can review or revoke connected apps at any time under **Access tokens** in the VAIL web app.
+You need a VAIL organization. Sign up at <https://agents.projectvail.com> (see [plans and pricing](https://agents.projectvail.com/pricing), or [pricing.md](https://agents.projectvail.com/pricing.md) for agents; probe run history is retained for 90 days on every plan). When you connect from any coding agent below, your browser opens VAIL to confirm which account and organization to authorize. You can review or revoke connected apps at any time under **Access tokens** in the VAIL web app.
 
 *(For headless environments, SSH boxes without port forwarding, CI pipelines, or the Hermes Desktop panel, you can also create a personal access token under **Access tokens** at <https://agents.projectvail.com/settings/tokens>.)*
 
@@ -46,7 +47,7 @@ You need a VAIL organization. Sign up at <https://agents.projectvail.com>. When 
 
 Then run `/mcp`, select `vail`, and complete the OAuth sign-in in your browser (or run `claude mcp login plugin:vail-agent-assurance:vail` in your terminal).
 
-Ask Claude Code, for example: *"Scan the agent in ./support-bot with VAIL and show me the behaviors it finds."*
+Ask Claude Code naturally—you don't need to mention VAIL by name to trigger the skills, for example: *"Find out where the agent in ./support-bot breaks its own instructions, and check whether it is ready to ship."*
 
 ### Without the plugin
 
@@ -54,6 +55,8 @@ Ask Claude Code, for example: *"Scan the agent in ./support-bot with VAIL and sh
 claude mcp add --scope user --transport http vail https://agents.projectvail.com/mcp
 claude mcp login vail
 ```
+
+Clients that support Skills over MCP (`io.modelcontextprotocol/skills`) and MCP Tasks (`io.modelcontextprotocol/tasks`) also discover VAIL's skills and run scans, classifications, probe generations, and steering experiments as background tasks directly through `https://agents.projectvail.com/mcp`.
 
 ## Install in Codex (and ChatGPT)
 
@@ -136,11 +139,11 @@ Then enter your token in the plugin's settings form in Hermes Desktop (or store 
 | `list_agents`, `create_agent` | Find or create the agent to work on. |
 | `get_agent_status` | Report the agent's stage, collected source, result freshness, steering links, and `next_actions`. |
 | `prepare_source_upload`, `complete_source_upload` | Upload an agent's source, as one `.tar.gz`/`.tgz`/`.tar` archive or a set of files. |
-| `scan_agent` | Generate the agent's context, then discover its vulnerability and control behaviors. |
-| `classify_behaviors` | Classify or re-classify vulnerability behaviors against Cisco, OWASP Agentic, OWASP LLM, MITRE ATLAS, and NIST AI 100-2 taxonomies. |
-| `generate_probes`, `set_generation_limits` | Write probes and option pools for discovered behaviors, and configure generation limits. |
-| `get_operation_status` | Poll progress, substeps, warnings, and outcomes for scans, classifications, and probe generation. |
-| `get_behaviors`, `get_probes` | Retrieve the complete current behavior (with classifications) and probe artifacts as JSON or verified downloads. |
+| `scan_agent` | Generate the agent's context, discover vulnerability and control behaviors, and automatically classify vulnerabilities against the five security taxonomies and `model_based` attribution. |
+| `classify_behaviors` | Classify or re-classify vulnerability behaviors against Cisco AI Security & Safety v2.0.0, OWASP Agentic Top 10 2026, OWASP LLM Top 10 2026, MITRE ATLAS v2026.09, and NIST AI 100-2 E2025 (with `model_based` attribution; human overrides are preserved). |
+| `generate_probes`, `set_generation_limits` | Write probes and option pools, then score every vulnerability behavior (including behaviors without probes; controls are not scored) on Impact, Trigger, and Fidelity-risk membership, and configure probe limits. |
+| `get_operation_status` | Poll progress, substeps (`generate_context`, `discover_behaviors`, `generate_probes`, `score_behaviors`), warnings, and outcomes for scans, classifications, and probe generation. |
+| `get_behaviors`, `get_probes` | Retrieve the complete current behavior artifact (with `scores`, `fidelity_risks` count, `scoring_guide`, and `classifications`; discovery `severity` is not returned) and probe artifact as JSON or verified downloads. |
 | `get_grading_package` | Download `vail-grading`, the package VAIL grades probe replies with, to test probes against an agent running locally (LangGraph, Hermes, or OpenClaw). |
 
 ### Steering setup, endpoint connection, experiments, and Promote (19 tools)

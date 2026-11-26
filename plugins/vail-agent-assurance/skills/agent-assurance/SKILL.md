@@ -1,6 +1,6 @@
 ---
 name: agent-assurance
-description: Scan agent source, classify behavior risks, and generate probes with VAIL, or set up steering contracts, run reviewed baseline and optimization experiments, and promote winning profiles as draft PRs. Use for VAIL onboarding, assurance scans and probes, behavior classification, steering experiments, and promotion. For local source fixes with VAIL's grading package, use agent-improvement.
+description: Find out where an AI agent the user is building breaks its own instructions, and test it. Use when the user says their agent ignores its system prompt, calls the wrong tool or skips one, gives different answers between runs, or does something it was told not to. Use when they ask how to test the agent, what could go wrong, whether it is ready to ship, or whether it will still work on a different or cheaper model. Also generates test cases, evals or red-team probes from the agent's prompts, tools and skills, maps risks to OWASP, MITRE ATLAS or NIST, and compares model and prompt configurations. Applies to the user's own agent, not this coding assistant. Works even if VAIL is not mentioned. To fix what it finds, use agent-improvement.
 ---
 
 # VAIL Agent Assurance Engine
@@ -22,10 +22,10 @@ The user needs an existing VAIL organization (sign up at https://agents.projectv
 If the `vail` tools are missing or calls fail to authenticate, ask the user to complete sign-in for their client:
 
 - **Claude Code / claude.ai / Cowork**: run `/mcp` (or `claude mcp login vail` in a terminal) and complete the browser sign-in, or click **Connect** on the VAIL connector in Claude.
-- **Codex / ChatGPT**: run `/mcp` or `codex mcp login vail` (or click **Authenticate** in Settings → MCP servers) and allow access in the browser.
+- **Codex / ChatGPT**: run `/mcp` or `codex mcp login vail` (or click **Authenticate** in Settings -> MCP servers) and allow access in the browser.
 - **OpenCode**: run `/mcps` and select `vail`, or run `opencode mcp auth vail` in a terminal.
 - **Cursor**: click **Connect** on the `vail` MCP server in Cursor's MCP settings to sign in via OAuth.
-- **Hermes**: run `hermes mcp login vail` (or click **Authenticate** on the `vail` card under Capabilities → Connectors in Hermes Desktop). On older Hermes builds without portable plugin OAuth, run `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth oauth` and sign in.
+- **Hermes**: run `hermes mcp login vail` (or click **Authenticate** on the `vail` card under Capabilities -> Connectors in Hermes Desktop). On older Hermes builds without portable plugin OAuth, run `hermes mcp add vail --url https://agents.projectvail.com/mcp --auth oauth` and sign in.
 
 Never ask the user to paste a password or access token into the conversation, never write a token into a file yourself, and never put a token on a command line you run.
 
@@ -40,6 +40,8 @@ Call `get_identity` first to confirm which organization you are acting in.
 ## Uploading or collecting source
 
 VAIL cannot read files on this machine directly. You can either upload local files (`prepare_source_upload` + `complete_source_upload`) or, when the organization has authorized VAIL's GitHub App (and you want GitHub provenance for later Promote), collect a committed repository revision with `collect_github_source`.
+
+Ask the user before sharing source externally (especially if this skill triggered without the user naming VAIL): state briefly that the VAIL Agent Assurance Engine stores the source for their organization and sends it to a model provider for analysis, and show the file list (or GitHub repository and ref) for confirmation before uploading.
 
 To upload local files in three steps:
 
@@ -57,12 +59,12 @@ A replacement is the **whole** new source: files you leave out are not kept from
 
 Upload sessions expire after an hour. If `complete_source_upload` reports `operation_in_progress`, wait for the running operation and call `complete_source_upload` again with the same `upload_id`.
 
-## Scanning, classifying, and generating probes
+## Scanning, classifying, generating probes, and scoring
 
-1. `scan_agent` starts the scan, which generates context and discovers vulnerability and control behaviors (automatically classifying vulnerability behaviors against security taxonomies when configured). It returns an `operation_id` straight away; the work continues on VAIL's servers even if this session ends.
-2. Poll `get_operation_status` with that ID every 30–60 seconds rather than in a tight loop.
-3. When the scan has succeeded, retrieve the behaviors with `get_behaviors`. To refresh taxonomy classifications later without rescanning, call `classify_behaviors` and poll `get_operation_status`.
-4. `generate_probes` writes probes for those behaviors. It is a separate, explicit step: only run it when the user wants probes. Poll `get_operation_status` the same way, then call `get_probes`.
+1. `scan_agent` starts the scan, which generates context and discovers vulnerability and control behaviors (automatically classifying vulnerability behaviors against the five security taxonomies and `model_based` attribution when configured). On clients that support MCP Tasks (`io.modelcontextprotocol/tasks`), the call runs as a background task and resolves directly to the completed operation summary; otherwise it returns an `operation_id` straight away and continues on VAIL's servers even if this session ends.
+2. If `scan_agent` returned a queued or running `operation_id` rather than a completed task result, poll `get_operation_status` with that ID every 30-60 seconds rather than in a tight loop.
+3. When the scan has succeeded, retrieve the behaviors with `get_behaviors`. Scores are pending until probe generation runs. To refresh taxonomy classifications later without rescanning, call `classify_behaviors` (waiting for task completion or polling `get_operation_status`; human classification overrides made in the web app are preserved).
+4. `generate_probes` runs two substeps (`generate_probes` and `score_behaviors`): it writes probes and shared option pools, then scores every vulnerability behavior on Impact, Trigger, and Fidelity-risk membership, including behaviors without probes (controls are not scored). It is a separate, explicit step: only run it when the user wants probes and scores. Wait for the MCP task to complete (or poll `get_operation_status` until both substeps finish), then call **both** `get_probes` and `get_behaviors` (now populated with `scores`, `fidelity_risks`, and `scoring_guide`). Retrying `generate_probes` resumes unfinished work and reuses completed probes and ratings.
 
 `set_generation_limits` changes how many vulnerability and control probes the next generation writes. Its bounds are reported by `get_agent_status`.
 
@@ -87,7 +89,7 @@ If a scan step fails, `get_operation_status` says which step and why. Calling `s
 
 ## Retrieving results
 
-`get_behaviors` and `get_probes` return complete JSON for the agent's current results, including `schema_version`, the agent, the source it was generated from, and the run that produced it. Probe exports include the option pools their placeholders draw from.
+`get_behaviors` and `get_probes` return complete JSON for the agent's current results, including `schema_version`, the agent, the source it was generated from, and the run that produced it. `get_behaviors` includes `vulnerabilities` (each with `scores` once scoring completes), `controls`, `fidelity_risks`, `scoring_guide`, and `classifications` when available; call `get_behaviors` again after `generate_probes` finishes to retrieve completed scores. Probe exports include the option pools their placeholders draw from.
 
 Larger results come back as a short-lived `download.url` instead. Fetch it promptly (`curl -sS -o <file> "<download.url>"`) and check the returned SHA-256.
 
@@ -96,5 +98,7 @@ Save results to files only when the user asks, and where they ask.
 ## Boundaries and next steps
 
 Approving catalog probes for recurring scheduled monitoring and managing schedules happen in the VAIL web app at https://agents.projectvail.com, as do initial account signup and GitHub App installation. VAIL never merges promotion PRs or deploys changes to user infrastructure.
+
+For LangGraph, Hermes, or OpenClaw agents inside a private network that cannot be exposed to the internet, the user can connect them using the outbound-only VAIL agent connector container (setup guide at https://agents.projectvail.com/docs/guides/connector.md). For plan details and limits, see https://agents.projectvail.com/pricing.md.
 
 For local source fixes based on VAIL results, use the `agent-improvement` skill (which downloads `vail-grading` via `get_grading_package` and grades local runs). For comparing runtime/request settings and opening a draft PR with a winning profile, use [references/steering.md](references/steering.md). If the user only requested a scan or probes, present the results and offer the relevant next step without starting it unasked.

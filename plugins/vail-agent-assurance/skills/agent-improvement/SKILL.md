@@ -1,6 +1,6 @@
 ---
 name: agent-improvement
-description: Use VAIL Agent Assurance Engine results to fix and harden an AI agent locally. Use when the user asks to fix, improve, harden, or address an agent's VAIL or Assurance Engine results, behavior risks, or vulnerabilities, to test VAIL probes against a locally running agent, or to continue an earlier session of doing so. For steering experiments and Promote, use agent-assurance.
+description: Fix a known bad behavior in an AI agent the user is building, and prove the fix holds. Use when the user says "it still does X after I told it not to", "make sure this never happens again" or "harden this before the demo", or asks to fix findings from a scan. Runs the same tests against a local copy before and after each change, and resumes a session in .vail/improvement/. Works even if VAIL is not mentioned. If the agent has not been scanned, start with agent-assurance.
 ---
 
 # Improving an agent from its VAIL results
@@ -18,7 +18,7 @@ For a steering experiment or Promote, use the `agent-assurance` skill's steering
 ## Before you start
 
 1. Call `get_identity` to confirm the organization, then choose the agent by `agent_id`, as in the `agent-assurance` skill.
-2. Call `get_agent_status`. You need current behaviors. If there are none, or they are outdated, the agent must be scanned first (the `agent-assurance` skill covers that). Probes are useful but not required: a behavior risk with no probe can still be addressed.
+2. Call `get_agent_status`. You need current behaviors. If there are none, or they are outdated, the agent must be scanned first (the `agent-assurance` skill covers that, including asking the user before uploading source). Probes are useful but not required: a behavior risk with no probe can still be addressed.
 3. Ask where the agent's source is locally, if it is not the current directory.
 4. Look for a results file from an earlier session (see **The results file**). If one exists for this agent:
    - If its `ae.run_id` matches the run of AE's current results, summarize what was done and what is left, and offer to continue from `position`.
@@ -43,7 +43,7 @@ The package supports LangGraph, Hermes, and OpenClaw agents. For an agent on ano
 2. Work only with the `vulnerabilities` artifact: those are the behavior risks. Control behaviors are not part of this.
 3. Attach each probe to the behavior risks it tests, using its `behavior_ids`.
 
-Each behavior risk has a `title`, `description`, `severity`, `testability`, `requirements` (each with the `violations` that would break it), and `evidence` pointing into the source: `document_paths`, `tool_names`, `subagent_names`.
+Each behavior risk has a `title`, `description`, `scores` (once `generate_probes` completes scoring: `impact` as `low`, `medium`, or `high`; `trigger` as `none`, `low`, `medium`, or `high`; and `is_fidelity_risk`; `null` while pending; discovery `severity` is not returned), `testability`, `requirements` (each with the `violations` that would break it, or `inconsistent` modality when source instructions contradict each other), and `evidence` pointing into the source: `document_paths`, `tool_names`, `subagent_names`. The `get_behaviors` envelope also provides top-level `fidelity_risks` (count and `behavior_ids`), `scoring_guide`, and `classifications` (mapping each vulnerability behavior to Cisco, OWASP Agentic, OWASP LLM, MITRE ATLAS, and NIST AI 100-2 codes plus `model_based` attribution).
 
 ## Decide what is addressable
 
@@ -81,7 +81,7 @@ To place a behavior risk:
 
 A group of one is fine.
 
-Order the groups by how important their part of the agent is, most important first. Judge importance by how central it is to the agent's purpose, how often the agent uses it, and what it can affect: a tool that sends, writes, or deletes matters more than one that only reads. Within a group, any order.
+Order the groups by how important their part of the agent is, most important first. Judge importance by how central it is to the agent's purpose, how often the agent uses it, and what it can affect: a tool that sends, writes, or deletes matters more than one that only reads. Use `scores` (Fidelity risks, Impact, and Trigger) and `classifications` (security framework mappings and `model_based` attribution) to help prioritize within and across groups—keeping in mind that a `model_based` risk often still benefits from a code-enforced guardrail or confirmation check. Within a group, put higher-Impact Fidelity risks first.
 
 **Stop.** Show the user the groups, their order, and a one-line reason for each group's place, and wait for them to confirm or change the order.
 
@@ -96,7 +96,7 @@ In the confirmed order, for each behavior risk:
    - how many repetitions: if the outcome may vary between runs (as it usually does with a model), run it several times, and consider variants, such as other option-pool cases
    - which models: ask whether to run against other models the agent already supports, to see how the result depends on the model's capability and personality
    - whether the test will be run again after a fix, to compare
-   - **the total number of runs** (test cases × models × repetitions, including any rerun after a fix)
+   - **the total number of runs** (test cases x models x repetitions, including any rerun after a fix)
 
    Then run it (see **Running a test locally**).
 4. **Propose fixes. Stop for approval of every change.**
@@ -126,7 +126,7 @@ With the grading environment's Python:
 1. **Render a test case:** `python -m vail_grading render --probes <probe export> --probe-id <id> --out cases/<test case id>.json`. It fills the message and the metrics from the same case, adds AE's response-format instructions to a JSON probe's message, and records the cases used.
 2. **Send the test case's `message`** to the local agent once per repetition, a fresh conversation each time, capturing each run's raw output as the platform's guide describes.
 3. **Convert** each capture: `python -m vail_grading convert --platform <platform> <raw file> --out <reply file>`.
-4. **Grade** the repetitions together: `python -m vail_grading grade <test case> <reply 1> <reply 2> ...`. Each metric's `result.passed` is true, false, or null when it could not be judged (the reason is in `result.details`). Leave out a repetition whose run failed, and record the failure.
+4. **Grade** the repetitions together: `python -m vail_grading grade <test case> <reply 1> <reply 2> ...`. Each metric's `result.passed` is true, false, or null when it could not be judged (the reason is in `result.details`). For contradictory (`inconsistent`) requirements, `vail-grading` supports nested consistency checks (`source: check`) that verify whether the agent resolves the contradiction the same way across repetitions. Leave out a repetition whose run failed, and record the failure.
 5. **Record the run** in the results file.
 
 ### Keeping the message and the metrics consistent

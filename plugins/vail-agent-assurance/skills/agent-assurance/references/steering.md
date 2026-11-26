@@ -6,10 +6,10 @@ Call `get_identity` and inspect the available tools first. They act as the signe
 
 ## Prepare the agent
 
-1. Call `get_steering_setup` for the maintained setup skill, schema, runtime helper, and starters. Follow that skill in the agent repository. Inspect the installed harness, declare bounded controls, implement their request bindings, and test each control and request isolation. `validate_steering_contract` returns canonical JSON and its digest. Static validation does not prove that the deployed agent applies settings.
+1. Call `get_steering_setup` for the maintained setup skill, schema, runtime helper, and starters. Follow that skill in the agent repository. Inspect the installed harness, declare bounded controls, implement their request bindings, and test each control and request isolation. One `vail-steering.json` contract schema supports four adapter transports (`langgraph-context`, `http-profile`, `hermes-runs`, `openclaw-agent`), and any supported connection without a contract can still test extra request instructions. `validate_steering_contract` returns canonical JSON and its digest. Static validation does not prove that the deployed agent applies settings.
 2. For HTTP/LangGraph bindings, follow the override protocol: VAIL sends only changed settings and keeps runtime defaults for omitted controls. The response must report the declared settings the agent actually used and its defaults before overrides. Never report secrets or merely echo the requested values. VAIL learns its starting settings from a valid baseline response, not from source defaults.
 3. Collect `vail-steering.json` at the source root with the implementation. For Promote, use `collect_github_source` with a committed repository and ref that VAIL can access through its configured GitHub authorization. Uploads work for local development (`prepare_source_upload` + `complete_source_upload`) but do not establish a PR destination. Source replacement makes generated results outdated; scan (`scan_agent`) and regenerate probes (`generate_probes`) before creating a new experiment. Existing frozen experiments retain their original inputs and results.
-4. Inspect `get_agent_connection`. Use an existing verified direct connection or connector, or prepare a new direct connection as described below. Contract setup alone does not authorize production changes, probe execution, or PR publication. Use the deployment the user authorized.
+4. Inspect `get_agent_connection`. Use an existing verified direct connection or outbound VAIL agent connector (for private-network LangGraph, Hermes, or OpenClaw agents; see https://agents.projectvail.com/docs/guides/connector.md), or prepare a new direct connection as described below. Contract setup alone does not authorize production changes, probe execution, or PR publication. Use the deployment the user authorized.
 
 ### Connect a direct endpoint
 
@@ -32,7 +32,7 @@ Call `run_experiment` once with `phase: "steering"`, the latest `revision`, a fr
 
 This single job freezes the reviewed cases, completes the initial baseline, and continues into optimization. Each candidate and its fresh baseline use the same comparison count, frozen when comparison begins. Later candidates carry accepted improvements forward. A baseline score of 100% stops the search; otherwise the loop stops at 100%, its budget or candidate limits, or `patience` attempts without improvement.
 
-Poll `get_experiment_job` with the returned `job_id` every 30–60 seconds (`get_operation_status` is for `scan_agent`, `classify_behaviors`, and `generate_probes`). After completion, inspect `get_experiment_report`, and pass IDs from `execution_index` to `get_experiment_execution` to read responses, tool traces, failed checks, and settings reported by the agent.
+If your client runs `run_experiment` as a background MCP task (`io.modelcontextprotocol/tasks`), wait for task completion; if it returns a queued or running `job_id`, poll `get_experiment_job` every 30-60 seconds (`get_operation_status` is for `scan_agent`, `classify_behaviors`, and `generate_probes`). After completion, inspect `get_experiment_report`, and pass IDs from `execution_index` to `get_experiment_execution` to read responses, tool traces, failed checks, and settings reported by the agent.
 
 ### Optional baseline review or manual comparison
 
@@ -42,7 +42,7 @@ Use `phase: "baseline"` separately only when the user wants to inspect baseline 
 
 Retry a lost launch response with the **same `request_key` and identical arguments** to recover the original job. Use a new key only for a new intended launch, including an explicit resume.
 
-`pause_experiment` pauses at the next safe boundary while retaining completed runs. Before an edit or explicit resume, read the latest `revision` and keep the frozen comparison and sweep settings.
+`pause_experiment` pauses at the next safe boundary while retaining completed runs (cancelling a `run_experiment` MCP task does the same). Before an edit or explicit resume, read the latest `revision` and keep the frozen comparison and sweep settings.
 
 ## Promote
 

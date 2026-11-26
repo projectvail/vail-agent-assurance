@@ -94,7 +94,7 @@ A session's record lives in the agent's repository:
   - Your own checks are defined in `own_checks`, saying how each is judged and why it was added; their results go in `own_check_results`.
 - `template_file` names an edited template when a probe was adapted, or a template of your own that uses AE's metric types.
 - A test with a message of your own has no `based_on_probe_id`. Without AE's metrics, its test cases are files you write, holding the message sent.
-- `planned_runs` is the total number of messages the test sends (test cases × models × repetitions), the number the user approved.
+- `planned_runs` is the total number of messages the test sends (test cases x models x repetitions), the number the user approved.
 - `agent_state` says whether a run was before or after the fix.
 - `conclusion` is `fix_applied`, `no_fix` (dismissed, or tested without needing a fix), or `inconclusive`, with `further_inquiry` recommending what to look at next.
 

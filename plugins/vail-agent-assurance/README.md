@@ -1,12 +1,12 @@
 # VAIL Agent Assurance
 
-Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent to check and harden the AI agents you build. Upload or collect an agent's source, scan it for vulnerability and control behaviors, classify risks against security taxonomies, generate probes that test those behaviors, and retrieve the results—without leaving your editor. From there, you can either run server-side steering experiments and promote a winning configuration as a draft GitHub PR, or test and fix the agent's source locally with VAIL's deterministic grading package.
+Use the [VAIL Agent Assurance Engine](https://agents.projectvail.com) from your coding agent to check and harden the AI agents you build. Upload or collect an agent's source, scan it for vulnerability and control behaviors, classify risks against five security taxonomies and `model_based` attribution, generate deterministic probes, score every vulnerability on **Impact**, **Trigger**, and **Fidelity risks**, and retrieve the results—without leaving your editor. From there, you can either run server-side steering experiments and promote a winning configuration as a draft GitHub PR, or test and fix the agent's source locally with VAIL's deterministic grading package.
 
 The plugin bundles:
 
 - a connection to VAIL's hosted MCP server at `https://agents.projectvail.com/mcp` authenticated via **OAuth 2.1**,
-- the `agent-assurance` skill, which walks your coding agent through source collection, scanning, behavior classification, probe generation, steering experiments, and draft PR promotion, and
-- the `agent-improvement` skill, which tests behavior risks against a local copy of the agent and proposes source fixes, each of which you approve.
+- the `agent-assurance` skill, which walks your coding agent through source collection, scanning, behavior classification, probe generation, Impact/Trigger/Fidelity risk scoring, steering experiments, and draft PR promotion, and
+- the `agent-improvement` skill, which tests behavior risks against a local copy of the agent (including nested consistency checks for contradictory rules) and proposes source fixes, each of which you approve.
 
 ## Supported platforms
 
@@ -21,12 +21,13 @@ The plugin bundles:
 
 ### Target AI agent frameworks
 
-- **Source scanning & probe generation:** `langgraph` (LangGraph), `hermes` (Hermes Agent), `openclaw` (OpenClaw), `pi` (Pi), `agentforce` (Salesforce Agentforce), `servicenow` (ServiceNow), and `http` (custom HTTP agents).
+- **Source scanning, classification, probe generation, and scoring:** `langgraph` (LangGraph), `hermes` (Hermes Agent), `openclaw` (OpenClaw), `pi` (Pi), `agentforce` (Salesforce Agentforce), `servicenow` (ServiceNow), and `http` (custom HTTP agents).
+- **Live probing & steering experiments:** **LangGraph**, **Hermes**, **OpenClaw**, and **custom HTTP** (`http`). For private-network LangGraph, Hermes, and OpenClaw agents, use the signed outbound-only VAIL agent connector container ([setup guide](https://agents.projectvail.com/docs/guides/connector.md)).
 - **Local probe execution & grading (`vail-grading`):** **LangGraph**, **Hermes**, and **OpenClaw**.
 
 ## Before you start
 
-Sign up for a VAIL organization at <https://agents.projectvail.com>. No API keys or environment variables are needed: when you connect the plugin, your browser opens VAIL so you can approve access for your account. You can view and revoke connected apps any time under **Access tokens** at <https://agents.projectvail.com/settings/tokens>.
+Sign up for a VAIL organization at <https://agents.projectvail.com> (see [plans and pricing](https://agents.projectvail.com/pricing), or [pricing.md](https://agents.projectvail.com/pricing.md) for agents). No API keys or environment variables are needed: when you connect the plugin, your browser opens VAIL so you can approve access for your account. You can view and revoke connected apps any time under **Access tokens** at <https://agents.projectvail.com/settings/tokens>.
 
 ## Install
 
@@ -59,7 +60,7 @@ hermes mcp login vail
 - **OpenCode:** run `opencode mcp add vail --url https://agents.projectvail.com/mcp` and `opencode mcp auth vail`.
 - **Cursor:** add `"vail": { "url": "https://agents.projectvail.com/mcp" }` to `~/.cursor/mcp.json` and click **Connect** in Cursor's MCP settings.
 
-Then ask your coding agent, for example: *"Scan the agent in ./support-bot with VAIL and show me the behaviors it finds."* Or, after a scan: *"Fix the behavior risks VAIL found in ./support-bot."*
+Then ask your coding agent naturally—the skills trigger without naming VAIL: *"Find out where the agent in ./support-bot breaks its own instructions, and check whether it is ready to ship."* Or, to fix a finding: *"It still calls the wrong tool after I told it not to — test ./support-bot locally and prove the fix holds."*
 
 ## What the plugin sends and downloads
 
@@ -69,11 +70,12 @@ The plugin runs no background process and installs nothing when it is enabled. E
 
 - Every MCP call goes to `https://agents.projectvail.com/mcp` authenticated with your OAuth 2.1 token (acting as your VAIL user in your organization).
 - **Your agent's source code.** When you ask to scan or upload an agent, your coding agent uploads that agent's source files (or one `.tar.gz`/`.tgz`/`.tar` archive of them) to VAIL via the temporary staging URLs returned by `prepare_source_upload`, or instructs VAIL to collect a committed revision from an already-authorized GitHub repository via `collect_github_source`. The skill instructs the coding agent to send prompts, tool definitions, code, and relevant docs, and to leave out secrets (`.env` files, keys), lockfiles, build output, and data dumps. VAIL still receives whatever is uploaded, so ask to see the file list before anything is sent if you want to check it.
-- **Direct endpoint connections and steering experiments (when requested).** If you ask to connect a direct test endpoint via `prepare_agent_connection`, your coding agent posts the returned ticket and optional endpoint credential directly from a local environment variable or key file (never through MCP tool arguments or chat text), and VAIL sends one verification message before saving. Running `run_experiment` sends reviewed experiment probes to your connected test agent and (for automatic steering) calls VAIL's proposal model within your configured `limit_usd` budget. Calling `publish_promotion` after reviewing `preview_promotion` opens a draft PR on your connected GitHub repository; VAIL never merges a PR or deploys code.
+- **Direct endpoint connections and steering experiments (when requested).** If you ask to connect a direct test endpoint via `prepare_agent_connection`, VAIL returns a short-lived verification URL and signed ticket so credentials stay out of MCP tool arguments and chat text, and sends one verification message before saving. (For private-network LangGraph, Hermes, and OpenClaw agents, the outbound-only VAIL agent connector keeps the agent's credential on its host.) Running `run_experiment` sends reviewed experiment probes to your connected test agent and (for automatic steering) calls VAIL's proposal model within your configured `limit_usd` budget. Calling `publish_promotion` after reviewing `preview_promotion` opens a draft PR on your connected GitHub repository; VAIL never merges a PR or deploys code.
+- **Classification and scoring data handling.** Behavior classification and Impact/Trigger scoring run through OpenRouter's decisions endpoint with Zero Data Retention (`zdr`) enforced by default. Probe run history is retained for 90 days.
 
 **Downloaded to your machine**
 
-- **Results and steering setup files.** Behaviors, classifications, probes, experiment drafts, reports, and execution traces come back as JSON (or as a short-lived download URL verified by SHA-256 when large). `get_steering_setup` returns portable text templates and reference docs for declaring `vail-steering.json` controls.
+- **Results and steering setup files.** Behaviors (with `scores`, `fidelity_risks`, `scoring_guide`, and `classifications`), probes, experiment drafts, reports, and execution traces come back as JSON (or as a short-lived download URL verified by SHA-256 when large). `get_steering_setup` returns portable text templates and reference docs for declaring `vail-steering.json` controls.
 - **The grading package (`agent-improvement` skill only).** To grade local test runs the way VAIL does, the skill calls `get_grading_package`, downloads VAIL's Python wheel `vail-grading` from the URL it returns, checks its SHA-256, and installs it with `pip` into a dedicated virtual environment (for example `.vail/grading/` in your agent's repository), separate from your agent's environment. `pip` also installs the package's dependencies (`pydantic` and `jsonpath-ng`) from PyPI. The coding agent then runs `python -m vail_grading` from that environment.
 
 **Run and written locally (`agent-improvement` skill only)**
@@ -94,12 +96,12 @@ The plugin runs no background process and installs nothing when it is enabled. E
 | `get_agent_status` | Report one agent's stage, collected source, result freshness, steering links, and allowed `next_actions`. |
 | `prepare_source_upload` | Start a staged source upload session and return temporary upload URLs per file. |
 | `complete_source_upload` | Validate staged files and publish them as the agent's complete new source. |
-| `scan_agent` | Asynchronously generate context and discover vulnerability and control behaviors. |
-| `classify_behaviors` | Classify or re-classify discovered vulnerability behaviors against Cisco, OWASP Agentic, OWASP LLM, MITRE ATLAS, and NIST AI 100-2 taxonomies. |
-| `generate_probes` | Asynchronously write vulnerability and control probes plus shared option pools. |
-| `get_operation_status` | Poll queued, running, succeeded, or failed state for `scan_agent`, `classify_behaviors`, or `generate_probes`. |
+| `scan_agent` | Asynchronously generate context, discover vulnerability and control behaviors, and automatically classify vulnerabilities against the five security taxonomies and `model_based` attribution. |
+| `classify_behaviors` | Classify or re-classify discovered vulnerability behaviors against Cisco AI Security & Safety v2.0.0, OWASP Agentic Top 10 2026, OWASP LLM Top 10 2026, MITRE ATLAS v2026.09, and NIST AI 100-2 E2025 (plus `model_based` attribution; preserves human overrides). |
+| `generate_probes` | Asynchronously write vulnerability and control probes plus shared option pools, then score every vulnerability behavior (including those without probes; controls are not scored) on Impact, Trigger, and Fidelity-risk membership. |
+| `get_operation_status` | Poll queued, running, succeeded, or failed state and substeps (`generate_context`, `discover_behaviors`, `generate_probes`, `score_behaviors`) for `scan_agent`, `classify_behaviors`, or `generate_probes`. |
 | `set_generation_limits` | Update how many vulnerability and control probes subsequent generations write. |
-| `get_behaviors` | Retrieve the complete current vulnerability and control behavior artifacts (plus classifications) as JSON or a verified download. |
+| `get_behaviors` | Retrieve the complete current vulnerability and control behavior artifacts (with `scores`, `fidelity_risks` count, `scoring_guide`, and `classifications`; discovery `severity` is not returned) as JSON or a verified download. |
 | `get_probes` | Retrieve the complete current probe catalogs and referenced option pools as JSON or a verified download. |
 | `get_grading_package` | Get the temporary download descriptor for `vail-grading`, to grade local test runs (LangGraph, Hermes, or OpenClaw). |
 
@@ -131,6 +133,6 @@ Approving catalog probes for recurring scheduled monitoring and managing schedul
 
 ## Support and license
 
-Homepage: <https://agents.projectvail.com>. Documentation and other harnesses: <https://github.com/projectvail/vail-agent-assurance>. Privacy Policy: <https://agents.projectvail.com/privacy>. Terms of Service: <https://agents.projectvail.com/terms>. Questions: <contact@projectvail.com>.
+Homepage: <https://agents.projectvail.com>. Pricing: <https://agents.projectvail.com/pricing> ([pricing.md](https://agents.projectvail.com/pricing.md)). Agent connector setup: <https://agents.projectvail.com/docs/guides/connector.md>. Documentation and other harnesses: <https://github.com/projectvail/vail-agent-assurance>. Privacy Policy: <https://agents.projectvail.com/privacy>. Terms of Service: <https://agents.projectvail.com/terms>. Questions: <contact@projectvail.com>.
 
 Copyright © 2026 Project VAIL. All rights reserved. See [LICENSE](LICENSE).
